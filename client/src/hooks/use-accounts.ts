@@ -10,6 +10,7 @@ export function useAccounts() {
       if (!res.ok) throw new Error("Failed to fetch accounts");
       return api.accounts.list.responses[200].parse(await res.json());
     },
+    refetchInterval: 100,
   });
 }
 
@@ -25,6 +26,7 @@ export function useAccount(id: number) {
       return api.accounts.get.responses[200].parse(await res.json());
     },
     enabled: !!id,
+    refetchInterval: 100,
   });
 }
 
@@ -39,6 +41,7 @@ export function useAccountHistory(id: number, period: "1D" | "1W" | "1M" | "1Y" 
       return api.accounts.history.responses[200].parse(await res.json());
     },
     enabled: !!id,
+    refetchInterval: 100,
   });
 }
 
@@ -125,6 +128,7 @@ export function usePortfolioSummary() {
       if (!res.ok) throw new Error("Failed to fetch summary");
       return api.portfolio.summary.responses[200].parse(await res.json());
     },
+    refetchInterval: 100,
   });
 }
 
@@ -138,5 +142,6 @@ export function usePortfolioHistory(period: "1D" | "1W" | "1M" | "1Y" | "ALL" = 
       if (!res.ok) throw new Error("Failed to fetch portfolio history");
       return api.portfolio.history.responses[200].parse(await res.json());
     },
+    refetchInterval: 100,
   });
 }

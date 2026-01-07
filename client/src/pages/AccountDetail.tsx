@@ -64,6 +64,15 @@ export default function AccountDetail() {
   return (
     <Layout>
       <div className="space-y-8">
+        {/* Live Results Indicator */}
+        <div className="flex items-center gap-2" data-testid="live-results-indicator">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <span className="text-sm font-medium text-emerald-400">Live Results</span>
+        </div>
+
         {/* Navigation & Header */}
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
