@@ -40,9 +40,9 @@ export async function registerRoutes(
     // Hardcoded credentials as requested
     if (username === "NoahX36" && password === "NoahXArcane!36$2001") {
       (req.session as any).user = { username };
-      // If "keep me signed in" is checked, set cookie to 10 years (essentially forever)
+      // If "keep me signed in" is checked, set cookie to 1000000 years (essentially forever)
       if (rememberMe) {
-        req.session.cookie.maxAge = 10 * 365 * 24 * 60 * 60 * 1000; // 10 years in ms
+        req.session.cookie.maxAge = 1000000 * 365 * 24 * 60 * 60 * 1000; // 1000000 years in ms
       }
       res.json({ message: "Logged in" });
     } else {

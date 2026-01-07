@@ -8,7 +8,7 @@ export default function Login() {
   const { user, login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
 
   if (user) {
@@ -68,18 +68,18 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 id="rememberMe"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded bg-white/5 border border-white/20 text-white focus:ring-0 focus:ring-offset-0 accent-white cursor-pointer"
+                className="w-3.5 h-3.5 rounded bg-zinc-800/50 border border-zinc-600/50 text-zinc-500 focus:ring-0 focus:ring-offset-0 accent-zinc-500 cursor-pointer"
                 data-testid="checkbox-remember-me"
               />
               <label 
                 htmlFor="rememberMe" 
-                className="text-sm text-zinc-400 cursor-pointer select-none"
+                className="text-xs text-zinc-500 cursor-pointer select-none"
               >
                 Keep me signed in
               </label>
@@ -98,7 +98,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={login.isPending}
-              className="w-full py-4 rounded-xl bg-white text-black font-bold text-lg hover:bg-zinc-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-white/5 mt-4"
+              className="w-full py-3 rounded-xl bg-white text-black font-semibold text-base hover:bg-zinc-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-white/5 mt-4"
             >
               {login.isPending ? (
                 <div className="flex items-center justify-center gap-2">
