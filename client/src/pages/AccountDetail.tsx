@@ -34,9 +34,6 @@ export default function AccountDetail() {
   if (!user) return <Redirect to="/login" />;
   if (!accountLoading && !account) return <Redirect to="/accounts" />;
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-
   const apiUrl = `${window.location.origin}/api/webhook/mt5/${account?.token}`;
 
   const handleCopy = () => {
@@ -86,7 +83,7 @@ export default function AccountDetail() {
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">{account?.name}</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{account?.name}</h1>
                     <button 
                       onClick={() => { setIsEditing(true); setNewName(account?.name || ""); }}
                       className="text-zinc-600 hover:text-white transition-colors"
@@ -96,25 +93,25 @@ export default function AccountDetail() {
                   </>
                 )}
               </div>
-              <p className="text-zinc-400 text-sm mt-1">ID: {account?.id.toString().padStart(4, '0')} • Last updated: {new Date(account?.lastUpdated || "").toLocaleDateString()}</p>
+              <p className="text-zinc-400 text-xs md:text-sm mt-1">ID: {account?.id.toString().padStart(4, '0')} • Last updated: {new Date(account?.lastUpdated || "").toLocaleDateString()}</p>
             </div>
           </div>
 
           <Dialog open={showDelete} onOpenChange={setShowDelete}>
             <DialogTrigger asChild>
-              <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm font-medium">
+              <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-xs font-medium">
                 <Trash2 className="w-4 h-4" />
                 <span>Delete Account</span>
               </button>
             </DialogTrigger>
-            <DialogContent className="glass-panel bg-zinc-950 text-white border-white/10">
+            <DialogContent className="glass-panel bg-zinc-950 text-white border-white/10 mx-4 sm:mx-0">
               <DialogHeader>
                 <DialogTitle>Delete Account?</DialogTitle>
                 <DialogDescription className="text-zinc-400">
                   Are you sure you want to delete this account? This action cannot be undone and all historical data will be lost.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter>
+              <DialogFooter className="gap-2 sm:gap-0">
                 <button onClick={() => setShowDelete(false)} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5">Cancel</button>
                 <button 
                   onClick={handleDelete} 
@@ -125,30 +122,6 @@ export default function AccountDetail() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="glass-panel p-6 rounded-3xl">
-            <p className="text-zinc-400 text-sm mb-1 uppercase tracking-wider">Balance</p>
-            <p className="text-2xl font-bold text-white">{formatCurrency(account?.balance || 0)}</p>
-          </div>
-          <div className="glass-panel p-6 rounded-3xl">
-            <p className="text-zinc-400 text-sm mb-1 uppercase tracking-wider">Equity</p>
-            <p className="text-2xl font-bold text-white">{formatCurrency(account?.equity || 0)}</p>
-          </div>
-          <div className="glass-panel p-6 rounded-3xl">
-            <p className="text-zinc-400 text-sm mb-1 uppercase tracking-wider">Total Profit</p>
-            <p className={clsx("text-2xl font-bold", (account?.profit || 0) >= 0 ? "text-emerald-400" : "text-rose-400")}>
-              {formatCurrency(account?.profit || 0)}
-            </p>
-          </div>
-          <div className="glass-panel p-6 rounded-3xl">
-            <p className="text-zinc-400 text-sm mb-1 uppercase tracking-wider">Return</p>
-            <p className={clsx("text-2xl font-bold", (account?.profitPercent || 0) >= 0 ? "text-emerald-400" : "text-rose-400")}>
-              {(account?.profitPercent || 0).toFixed(2)}%
-            </p>
-          </div>
         </div>
 
         {/* Chart */}
@@ -163,13 +136,13 @@ export default function AccountDetail() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-panel p-8 rounded-3xl border border-white/5"
+          className="glass-panel p-4 md:p-8 rounded-3xl border border-white/5 overflow-hidden"
         >
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400">
+          <div className="flex flex-col md:flex-row items-start gap-4">
+            <div className="p-3 bg-blue-500/10 rounded-xl text-blue-400 shrink-0">
               <AlertCircle className="w-6 h-6" />
             </div>
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 space-y-4 min-w-0 w-full">
               <div>
                 <h3 className="text-lg font-bold text-white mb-1">Connect MetaTrader 5</h3>
                 <p className="text-zinc-400 text-sm">
@@ -178,14 +151,14 @@ export default function AccountDetail() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 max-w-2xl bg-black/40 border border-white/10 rounded-xl p-1 pl-4">
-                <code className="flex-1 font-mono text-sm text-zinc-300 truncate py-2 select-all">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 max-w-full bg-black/40 border border-white/10 rounded-xl p-1 overflow-hidden">
+                <code className="flex-1 font-mono text-[10px] md:text-sm text-zinc-300 truncate py-2 px-3 select-all">
                   {apiUrl}
                 </code>
                 <button
                   onClick={handleCopy}
                   className={clsx(
-                    "p-2.5 rounded-lg transition-all font-medium flex items-center gap-2",
+                    "px-4 py-2.5 rounded-lg transition-all font-medium flex items-center justify-center gap-2 shrink-0",
                     copied ? "bg-emerald-500/20 text-emerald-400" : "bg-white/10 text-white hover:bg-white/20"
                   )}
                 >

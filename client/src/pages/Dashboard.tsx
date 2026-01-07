@@ -5,7 +5,7 @@ import { AccountCard } from "@/components/AccountCard";
 import { usePortfolioSummary, usePortfolioHistory, useAccounts } from "@/hooks/use-accounts";
 import { Link, Redirect } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useState } from "react";
 import { clsx } from "clsx";
 
@@ -48,22 +48,22 @@ export default function Dashboard() {
         className="space-y-8"
       >
         {/* Header Section */}
-        <motion.div variants={item} className="flex justify-between items-end">
+        <motion.div variants={item} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div>
-            <h2 className="text-zinc-400 font-medium mb-1">Total Balance</h2>
-            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight text-glow">
+            <h2 className="text-zinc-500 text-sm font-medium mb-1">Total Balance</h2>
+            <h1 className="text-2xl md:text-3xl font-bold text-white/70 tracking-tight">
               {isLoading ? "..." : formatCurrency(summary?.totalBalance || 0)}
             </h1>
           </div>
-          <div className="text-right hidden sm:block">
-            <p className="text-zinc-400 font-medium mb-1">Total Profit</p>
+          <div className="w-full md:w-auto">
+            <p className="text-zinc-400 font-medium mb-1">Profit ({period})</p>
             <div className={clsx(
-              "text-2xl font-bold flex items-center justify-end gap-2",
+              "text-3xl md:text-4xl font-bold flex items-center gap-2",
               (summary?.totalProfit || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
             )}>
-              {(summary?.totalProfit || 0) >= 0 ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownRight className="w-6 h-6" />}
+              {(summary?.totalProfit || 0) >= 0 ? <ArrowUpRight className="w-8 h-8 md:w-10 md:h-10" /> : <ArrowDownRight className="w-8 h-8 md:w-10 md:h-10" />}
               <span>{formatCurrency(summary?.totalProfit || 0)}</span>
-              <span className="text-sm bg-white/10 px-2 py-0.5 rounded-md ml-1">
+              <span className="text-lg bg-white/10 px-3 py-1 rounded-lg ml-1">
                 {(summary?.totalProfitPercent || 0).toFixed(2)}%
               </span>
             </div>
@@ -77,37 +77,6 @@ export default function Dashboard() {
             onPeriodChange={setPeriod} 
             isLoading={historyLoading} 
           />
-        </motion.div>
-
-        {/* Quick Stats Grid */}
-        <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="glass-panel p-6 rounded-3xl flex items-center gap-4">
-            <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
-              <Wallet className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-zinc-400 text-sm">Equity</p>
-              <p className="text-xl font-bold text-white">{formatCurrency(summary?.totalEquity || 0)}</p>
-            </div>
-          </div>
-          <div className="glass-panel p-6 rounded-3xl flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-zinc-400 text-sm">Win Rate</p>
-              <p className="text-xl font-bold text-white">N/A</p>
-            </div>
-          </div>
-          <div className="glass-panel p-6 rounded-3xl flex items-center gap-4">
-            <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400">
-              <Wallet className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-zinc-400 text-sm">Active Accounts</p>
-              <p className="text-xl font-bold text-white">{accounts?.length || 0}</p>
-            </div>
-          </div>
         </motion.div>
 
         {/* Recent Accounts Section */}

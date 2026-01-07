@@ -42,20 +42,17 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
             <p className="text-2xl font-bold text-white tracking-tight">{formatCurrency(account.balance)}</p>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-            <div>
-              <p className="text-muted-foreground text-xs mb-1">Equity</p>
-              <p className="text-white font-medium">{formatCurrency(account.equity)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-muted-foreground text-xs mb-1">Profit</p>
-              <div className={clsx(
-                "flex items-center justify-end gap-1 font-medium",
-                isProfit ? "text-emerald-400" : "text-rose-400"
-              )}>
-                {isProfit ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                <span>{account.profitPercent > 0 ? "+" : ""}{account.profitPercent.toFixed(2)}%</span>
-              </div>
+          <div className="pt-4 border-t border-white/5">
+            <p className="text-muted-foreground text-xs mb-1">Profit</p>
+            <div className={clsx(
+              "flex items-center gap-2 font-bold text-xl",
+              isProfit ? "text-emerald-400" : "text-rose-400"
+            )}>
+              {isProfit ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              <span>{formatCurrency(account.profit)}</span>
+              <span className="text-sm bg-white/10 px-2 py-0.5 rounded-md">
+                {account.profitPercent > 0 ? "+" : ""}{account.profitPercent.toFixed(2)}%
+              </span>
             </div>
           </div>
         </div>
