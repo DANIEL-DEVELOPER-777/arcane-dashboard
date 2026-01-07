@@ -1,0 +1,145 @@
+import { useAuth } from "@/hooks/use-auth";
+import { Layout } from "@/components/Layout";
+import { EquityChart } from "@/components/EquityChart";
+import { AccountCard } from "@/components/AccountCard";
+import { usePortfolioSummary, usePortfolioHistory, useAccounts } from "@/hooks/use-accounts";
+import { Link, Redirect } from "wouter";
+import { motion } from "framer-motion";
+import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp } from "lucide-react";
+import { useState } from "react";
+import { clsx } from "clsx";
+
+export default function Dashboard() {
+  const { user, isLoading: authLoading } = useAuth();
+  const { data: summary, isLoading: summaryLoading } = usePortfolioSummary();
+  const { data: accounts, isLoading: accountsLoading } = useAccounts();
+  const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("ALL");
+  const { data: history, isLoading: historyLoading } = usePortfolioHistory(period);
+
+  if (authLoading) return null;
+  if (!user) return <Redirect to="/login" />;
+
+  const isLoading = summaryLoading || accountsLoading;
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
+  return (
+    <Layout>
+      <motion.div 
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-8"
+      >
+        {/* Header Section */}
+        <motion.div variants={item} className="flex justify-between items-end">
+          <div>
+            <h2 className="text-zinc-400 font-medium mb-1">Total Balance</h2>
+            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight text-glow">
+              {isLoading ? "..." : formatCurrency(summary?.totalBalance || 0)}
+            </h1>
+          </div>
+          <div className="text-right hidden sm:block">
+            <p className="text-zinc-400 font-medium mb-1">Total Profit</p>
+            <div className={clsx(
+              "text-2xl font-bold flex items-center justify-end gap-2",
+              (summary?.totalProfit || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+            )}>
+              {(summary?.totalProfit || 0) >= 0 ? <ArrowUpRight className="w-6 h-6" /> : <ArrowDownRight className="w-6 h-6" />}
+              <span>{formatCurrency(summary?.totalProfit || 0)}</span>
+              <span className="text-sm bg-white/10 px-2 py-0.5 rounded-md ml-1">
+                {(summary?.totalProfitPercent || 0).toFixed(2)}%
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Chart Section */}
+        <motion.div variants={item}>
+          <EquityChart 
+            data={history} 
+            onPeriodChange={setPeriod} 
+            isLoading={historyLoading} 
+          />
+        </motion.div>
+
+        {/* Quick Stats Grid */}
+        <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-panel p-6 rounded-3xl flex items-center gap-4">
+            <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-zinc-400 text-sm">Equity</p>
+              <p className="text-xl font-bold text-white">{formatCurrency(summary?.totalEquity || 0)}</p>
+            </div>
+          </div>
+          <div className="glass-panel p-6 rounded-3xl flex items-center gap-4">
+            <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-zinc-400 text-sm">Win Rate</p>
+              <p className="text-xl font-bold text-white">N/A</p>
+            </div>
+          </div>
+          <div className="glass-panel p-6 rounded-3xl flex items-center gap-4">
+            <div className="p-3 bg-purple-500/20 rounded-xl text-purple-400">
+              <Wallet className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-zinc-400 text-sm">Active Accounts</p>
+              <p className="text-xl font-bold text-white">{accounts?.length || 0}</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Recent Accounts Section */}
+        <motion.div variants={item} className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-bold text-white">Connected Accounts</h3>
+            <Link href="/accounts" className="text-sm text-zinc-400 hover:text-white transition-colors flex items-center gap-1">
+              View All <ArrowUpRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-48 bg-white/5 rounded-3xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {accounts?.slice(0, 3).map((account) => (
+                <AccountCard key={account.id} account={account} detailed />
+              ))}
+              {(!accounts || accounts.length === 0) && (
+                <div className="col-span-3 py-12 text-center border border-dashed border-white/10 rounded-3xl">
+                  <p className="text-zinc-500">No accounts connected yet.</p>
+                  <Link href="/accounts" className="text-white underline mt-2 inline-block">Go to Accounts to add one</Link>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      </motion.div>
+    </Layout>
+  );
+}
