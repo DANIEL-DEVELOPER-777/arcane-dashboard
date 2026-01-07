@@ -28,7 +28,6 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-white/90 text-lg tracking-tight">{account.name}</h3>
             </div>
-            <p className="text-muted-foreground text-xs font-mono tracking-wider opacity-60">ID: {account.id.toString().padStart(4, '0')}</p>
           </div>
           {detailed && (
             <div className="bg-white/5 rounded-full p-2 group-hover:bg-white/10 transition-colors">
