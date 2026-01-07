@@ -118,12 +118,15 @@ export async function registerRoutes(
         totalBalance: acc.totalBalance + account.balance,
         totalEquity: acc.totalEquity + account.equity,
         totalProfit: acc.totalProfit + account.profit,
+        totalDailyProfit: acc.totalDailyProfit + account.dailyProfit,
       }),
-      { totalBalance: 0, totalEquity: 0, totalProfit: 0 }
+      { totalBalance: 0, totalEquity: 0, totalProfit: 0, totalDailyProfit: 0 }
     );
 
-    const totalProfitPercent = summary.totalBalance > 0 
-      ? (summary.totalProfit / summary.totalBalance) * 100 
+    // Calculate percentage based on starting balance (balance before profit)
+    const totalStartingBalance = summary.totalBalance - summary.totalProfit;
+    const totalProfitPercent = totalStartingBalance > 0 
+      ? (summary.totalProfit / totalStartingBalance) * 100 
       : 0;
 
     res.json({ ...summary, totalProfitPercent });
@@ -142,14 +145,14 @@ export async function registerRoutes(
   // --- Webhook Route (No Auth Required - Protected by Token) ---
   app.post(api.webhook.mt5.path, async (req, res) => {
     const { token } = req.params;
-    const { balance, equity, profit, dailyProfit, dailyProfitPercent } = req.body;
+    const { balance, equity, profit, dailyProfit } = req.body;
 
     const account = await storage.getAccountByToken(token);
     if (!account) {
       return res.status(404).json({ message: "Invalid token" });
     }
 
-    await storage.updateAccountStats(account.id, balance, equity, profit, dailyProfit, dailyProfitPercent);
+    await storage.updateAccountStats(account.id, balance, equity, profit, dailyProfit);
     res.json({ status: "ok" });
   });
 

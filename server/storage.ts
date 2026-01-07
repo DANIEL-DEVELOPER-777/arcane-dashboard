@@ -16,7 +16,7 @@ export interface IStorage {
   getAccountByToken(token: string): Promise<Account | undefined>;
   createAccount(account: InsertAccount): Promise<Account>;
   updateAccount(id: number, updates: Partial<InsertAccount>): Promise<Account>;
-  updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number, dailyProfitPercent?: number): Promise<Account>;
+  updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number): Promise<Account>;
   deleteAccount(id: number): Promise<void>;
 
   // History
@@ -58,8 +58,16 @@ export class DatabaseStorage implements IStorage {
     return account;
   }
 
-  async updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number, dailyProfitPercent?: number): Promise<Account> {
-    const profitPercent = balance > 0 ? (profit / balance) * 100 : 0;
+  async updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number): Promise<Account> {
+    // Calculate starting balance for total profit (balance before all profit was made)
+    const startingBalance = balance - profit;
+    const profitPercent = startingBalance > 0 ? (profit / startingBalance) * 100 : 0;
+    
+    // Calculate daily profit percent based on daily starting balance
+    const dailyProfitValue = dailyProfit ?? 0;
+    const dailyStartingBalance = balance - dailyProfitValue;
+    const dailyProfitPercentCalc = dailyStartingBalance > 0 ? (dailyProfitValue / dailyStartingBalance) * 100 : 0;
+    
     const [account] = await db
       .update(accounts)
       .set({
@@ -67,8 +75,8 @@ export class DatabaseStorage implements IStorage {
         equity,
         profit,
         profitPercent,
-        dailyProfit: dailyProfit ?? 0,
-        dailyProfitPercent: dailyProfitPercent ?? 0,
+        dailyProfit: dailyProfitValue,
+        dailyProfitPercent: dailyProfitPercentCalc,
         lastUpdated: new Date(),
       })
       .where(eq(accounts.id, id))
