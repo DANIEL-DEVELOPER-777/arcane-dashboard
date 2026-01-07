@@ -58,6 +58,8 @@ export async function registerRoutes(
 
   app.get(api.auth.check.path, (req, res) => {
     if (req.session && (req.session as any).user) {
+      // Refresh the session cookie to 1 year on every page load
+      req.session.cookie.maxAge = 365 * 24 * 60 * 60 * 1000;
       res.json((req.session as any).user);
     } else {
       res.json(null);
