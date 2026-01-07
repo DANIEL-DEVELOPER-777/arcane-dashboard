@@ -24,7 +24,7 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
         "border border-white/5 hover:border-white/20"
       )}>
         <div className="flex justify-between items-center mb-6 gap-2">
-          <h3 className="font-medium text-white/90 text-xl md:text-lg tracking-tight">{account.name}</h3>
+          <h3 className="font-bold text-white/90 text-xl md:text-lg tracking-tight">{account.name}</h3>
           {detailed && (
             <div className="bg-white/5 rounded-full p-2 group-hover:bg-white/10 transition-colors shrink-0">
               <ArrowRight className="w-4 h-4 text-white/50 group-hover:text-white" />
