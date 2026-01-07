@@ -13,7 +13,7 @@ export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const { data: summary, isLoading: summaryLoading } = usePortfolioSummary();
   const { data: accounts, isLoading: accountsLoading } = useAccounts();
-  const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("ALL");
+  const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
   const { data: history, isLoading: historyLoading } = usePortfolioHistory(period);
 
   if (authLoading) return null;

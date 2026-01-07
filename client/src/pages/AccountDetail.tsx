@@ -19,7 +19,7 @@ export default function AccountDetail() {
   const { toast } = useToast();
 
   const { data: account, isLoading: accountLoading } = useAccount(id);
-  const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("ALL");
+  const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
   const { data: history, isLoading: historyLoading } = useAccountHistory(id, period);
   
   const updateAccount = useUpdateAccount();
@@ -102,31 +102,6 @@ export default function AccountDetail() {
             </div>
           </div>
 
-          <Dialog open={showDelete} onOpenChange={setShowDelete}>
-            <DialogTrigger asChild>
-              <button className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-xs font-medium">
-                <Trash2 className="w-4 h-4" />
-                <span>Delete Account</span>
-              </button>
-            </DialogTrigger>
-            <DialogContent className="glass-panel bg-zinc-950 text-white border-white/10 mx-4 sm:mx-0">
-              <DialogHeader>
-                <DialogTitle>Delete Account?</DialogTitle>
-                <DialogDescription className="text-zinc-400">
-                  Are you sure you want to delete this account? This action cannot be undone and all historical data will be lost.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="gap-2 sm:gap-0">
-                <button onClick={() => setShowDelete(false)} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5">Cancel</button>
-                <button 
-                  onClick={handleDelete} 
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium shadow-lg shadow-red-900/20"
-                >
-                  Delete Permanently
-                </button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* Stats Summary */}
@@ -197,6 +172,39 @@ export default function AccountDetail() {
             </div>
           </div>
         </motion.div>
+
+        {/* Delete Account Section */}
+        <div className="pt-8 border-t border-white/5">
+          <Dialog open={showDelete} onOpenChange={setShowDelete}>
+            <DialogTrigger asChild>
+              <button 
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm font-medium"
+                data-testid="button-delete-account"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Account</span>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="glass-panel bg-zinc-950 text-white border-white/10 mx-4 sm:mx-0">
+              <DialogHeader>
+                <DialogTitle>Delete Account?</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Are you sure you want to delete this account? This action cannot be undone and all historical data will be lost.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <button onClick={() => setShowDelete(false)} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5">Cancel</button>
+                <button 
+                  onClick={handleDelete} 
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium shadow-lg shadow-red-900/20"
+                  data-testid="button-confirm-delete"
+                >
+                  Delete Permanently
+                </button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </Layout>
   );
