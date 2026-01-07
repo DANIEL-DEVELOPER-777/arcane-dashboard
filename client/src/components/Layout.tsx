@@ -34,10 +34,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <h1 className="text-3xl font-bold tracking-tighter text-glow" style={{ fontFamily: 'var(--font-display)' }}>
           Arcane
         </h1>
-        <div className="inline-flex items-center gap-1.5 bg-white/[0.03] px-2 py-1 rounded-md mt-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-medium text-emerald-400">Live</span>
-        </div>
       </div>
 
       <div className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
@@ -78,13 +74,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Mobile Header with Hamburger */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-white/5 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold tracking-tighter text-glow">Arcane</h1>
-          <div className="inline-flex items-center gap-1.5 bg-white/[0.03] px-2 py-1 rounded-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-medium text-emerald-400">Live</span>
-          </div>
-        </div>
+        <h1 className="text-xl font-bold tracking-tighter text-glow">Arcane</h1>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
