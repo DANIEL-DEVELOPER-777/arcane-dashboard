@@ -56,6 +56,11 @@ export default function AccountDetail() {
     setLocation("/accounts");
   };
 
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
+  const isProfit = (account?.profit || 0) >= 0;
+
   return (
     <Layout>
       <div className="space-y-8">
@@ -122,6 +127,29 @@ export default function AccountDetail() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Stats Summary */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div>
+            <h2 className="text-zinc-500 text-sm font-medium mb-1">Balance</h2>
+            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+              {accountLoading ? "..." : formatCurrency(account?.balance || 0)}
+            </h1>
+          </div>
+          <div className="w-full md:w-auto">
+            <p className="text-zinc-400 font-medium mb-1">Profit ({period})</p>
+            <div className={clsx(
+              "text-3xl md:text-4xl font-bold flex items-center gap-2",
+              isProfit ? "text-emerald-400" : "text-rose-400"
+            )}>
+              {isProfit ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : <TrendingDown className="w-8 h-8 md:w-10 md:h-10" />}
+              <span>{formatCurrency(account?.profit || 0)}</span>
+              <span className="text-lg bg-white/10 px-3 py-1 rounded-lg ml-1">
+                {account?.profitPercent !== undefined ? (account.profitPercent >= 0 ? "+" : "-") : ""}{Math.abs(account?.profitPercent || 0).toFixed(2)}%
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Chart */}
