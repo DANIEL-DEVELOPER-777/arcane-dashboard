@@ -120,7 +120,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto relative">
+        <main className="flex-1 md:overflow-y-auto relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
             {children}
           </div>
