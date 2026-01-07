@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/Layout";
 import { AccountCard } from "@/components/AccountCard";
 import { AddAccountDialog } from "@/components/AddAccountDialog";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { useAccounts } from "@/hooks/use-accounts";
 import { Redirect } from "wouter";
 import { motion } from "framer-motion";
@@ -10,7 +11,7 @@ export default function Accounts() {
   const { user, isLoading: authLoading } = useAuth();
   const { data: accounts, isLoading } = useAccounts();
 
-  if (authLoading) return null;
+  if (authLoading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
 
   const container = {

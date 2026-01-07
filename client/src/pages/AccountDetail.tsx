@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/Layout";
 import { EquityChart } from "@/components/EquityChart";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { useAccount, useAccountHistory, useUpdateAccount, useDeleteAccount } from "@/hooks/use-accounts";
 import { useRoute, Redirect, useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -30,7 +31,7 @@ export default function AccountDetail() {
   const [copied, setCopied] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
-  if (authLoading) return null;
+  if (authLoading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
   if (!accountLoading && !account) return <Redirect to="/accounts" />;
 

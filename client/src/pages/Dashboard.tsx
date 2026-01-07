@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/Layout";
 import { EquityChart } from "@/components/EquityChart";
 import { AccountCard } from "@/components/AccountCard";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { usePortfolioSummary, usePortfolioHistory, useAccounts } from "@/hooks/use-accounts";
 import { Link, Redirect } from "wouter";
 import { motion } from "framer-motion";
@@ -16,7 +17,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
   const { data: history, isLoading: historyLoading } = usePortfolioHistory(period);
 
-  if (authLoading) return null;
+  if (authLoading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
 
   const isLoading = summaryLoading || accountsLoading;
