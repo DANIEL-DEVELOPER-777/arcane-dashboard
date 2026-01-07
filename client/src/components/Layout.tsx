@@ -69,13 +69,46 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <h1 className="text-xl font-bold tracking-tighter text-glow">Arcane</h1>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="w-6 h-6" />
+            <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+              {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-72 bg-zinc-950 border-r border-white/10">
+          <SheetContent side="top" className="p-0 bg-zinc-950 border-b border-white/10 h-auto max-h-[80vh]">
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-            <NavContent />
+            <div className="flex flex-col">
+              <div className="px-4 py-4 space-y-2">
+                {navItems.map((item) => (
+                  <Link 
+                    key={item.href} 
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={clsx(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
+                      location === item.href 
+                        ? "bg-white/10 text-white shadow-lg shadow-black/5" 
+                        : "text-muted-foreground hover:bg-white/5 hover:text-white"
+                    )}
+                    data-testid={`link-nav-${item.label.toLowerCase()}`}
+                  >
+                    <item.icon className={clsx(
+                      "w-5 h-5 transition-transform group-hover:scale-110",
+                      location === item.href ? "text-white" : "text-muted-foreground group-hover:text-white"
+                    )} />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+              <div className="px-4 py-4 border-t border-white/5">
+                <button
+                  onClick={() => { setOpen(false); handleLogout(); }}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-red-400 transition-colors"
+                  data-testid="button-mobile-logout"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span className="font-medium text-sm">Sign Out</span>
+                </button>
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
       </header>
