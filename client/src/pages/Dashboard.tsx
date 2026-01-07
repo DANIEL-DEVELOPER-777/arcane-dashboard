@@ -48,8 +48,8 @@ export default function Dashboard() {
         className="space-y-8"
       >
         {/* Live Results Indicator */}
-        <motion.div variants={item} className="inline-flex items-center gap-2 bg-white/[0.03] px-3 py-1.5 rounded-lg" data-testid="live-results-indicator">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <motion.div variants={item} className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 rounded-lg" data-testid="live-results-indicator">
+          <span className="w-2 h-2 rounded-full border-2 border-emerald-500 animate-pulse" />
           <span className="text-sm font-medium text-emerald-400">Live Results</span>
         </motion.div>
 
