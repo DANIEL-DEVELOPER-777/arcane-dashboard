@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { LogOut, Home, Wallet, Menu } from "lucide-react";
 import { clsx } from "clsx";
-import { useState, useEffect, useRef } from "react";
+import { useState, useLayoutEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -10,11 +10,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
-  const mainRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    mainRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }, [location]);
 
   const handleLogout = () => {
@@ -126,7 +126,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Main Content */}
-        <main ref={mainRef} className="flex-1 md:overflow-y-auto relative">
+        <main className="flex-1 md:overflow-y-auto relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
             {children}
           </div>
