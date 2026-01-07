@@ -65,7 +65,7 @@ export function useAuth() {
 
   return {
     user: userQuery.data,
-    isLoading: userQuery.isLoading,
+    isLoading: userQuery.isPending && !userQuery.isFetched,
     login: loginMutation,
     logout: logoutMutation,
   };
