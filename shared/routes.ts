@@ -22,6 +22,7 @@ export const api = {
       input: z.object({
         username: z.string(),
         password: z.string(),
+        rememberMe: z.boolean().optional(),
       }),
       responses: {
         200: z.object({ message: z.string() }),

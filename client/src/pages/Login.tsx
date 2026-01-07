@@ -8,6 +8,7 @@ export default function Login() {
   const { user, login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
 
   if (user) {
@@ -18,7 +19,7 @@ export default function Login() {
     e.preventDefault();
     setError("");
     try {
-      await login.mutateAsync({ username, password });
+      await login.mutateAsync({ username, password, rememberMe });
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
     }
@@ -65,6 +66,23 @@ export default function Login() {
                 className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/20 focus:outline-none focus:border-white/30 focus:ring-1 focus:ring-white/30 transition-all"
                 placeholder="Enter password"
               />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded bg-white/5 border border-white/20 text-white focus:ring-0 focus:ring-offset-0 accent-white cursor-pointer"
+                data-testid="checkbox-remember-me"
+              />
+              <label 
+                htmlFor="rememberMe" 
+                className="text-sm text-zinc-400 cursor-pointer select-none"
+              >
+                Keep me signed in
+              </label>
             </div>
 
             {error && (

@@ -36,10 +36,14 @@ export async function registerRoutes(
 
   // --- Auth Routes ---
   app.post(api.auth.login.path, (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, rememberMe } = req.body;
     // Hardcoded credentials as requested
     if (username === "NoahX36" && password === "NoahXArcane!36$2001") {
       (req.session as any).user = { username };
+      // If "keep me signed in" is checked, set cookie to 10 years (essentially forever)
+      if (rememberMe) {
+        req.session.cookie.maxAge = 10 * 365 * 24 * 60 * 60 * 1000; // 10 years in ms
+      }
       res.json({ message: "Logged in" });
     } else {
       res.status(401).json({ message: "Invalid credentials" });
