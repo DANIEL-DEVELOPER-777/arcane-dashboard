@@ -63,7 +63,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="min-h-screen flex flex-col bg-background text-foreground relative overflow-hidden">
+      {/* Dynamic background blobs - liquid effect */}
+      <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-500/10 blur-[120px] animate-pulse pointer-events-none z-0" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-purple-500/10 blur-[120px] animate-pulse delay-700 pointer-events-none z-0" />
+
       {/* Mobile Header with Hamburger */}
       <header className="md:hidden flex items-center justify-between p-4 border-b border-white/5 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
         <h1 className="text-xl font-bold tracking-tighter text-glow">Arcane</h1>
