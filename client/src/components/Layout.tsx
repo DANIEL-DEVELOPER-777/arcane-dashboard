@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { LogOut, Home, Wallet, Menu } from "lucide-react";
 import { clsx } from "clsx";
-import { useState, useLayoutEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -10,11 +10,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const prevLocation = useRef(location);
 
-  useLayoutEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+  useEffect(() => {
+    if (prevLocation.current !== location) {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      prevLocation.current = location;
+    }
   }, [location]);
 
   const handleLogout = () => {
