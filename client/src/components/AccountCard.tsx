@@ -17,8 +17,8 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
   return (
     <Link href={`/accounts/${account.id}`} className="block h-full group">
       <div className={clsx(
-        "glass-card rounded-3xl p-6 h-full flex flex-col justify-between relative overflow-hidden",
-        "transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-white/5",
+        "glass-panel rounded-3xl p-6 h-full flex flex-col justify-between relative overflow-hidden",
+        "transition-all duration-300 hover:shadow-2xl hover:shadow-white/5",
         "border border-white/5 hover:border-white/20"
       )}>
         <div className="flex justify-between items-start mb-6">
