@@ -9,7 +9,7 @@ import { ArrowLeft, Copy, Trash2, Edit2, Check, AlertCircle, TrendingUp, Trendin
 import { useState } from "react";
 import { clsx } from "clsx";
 import { Link } from "wouter";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AccountDetail() {
@@ -186,23 +186,25 @@ export default function AccountDetail() {
                 <span>Delete Account</span>
               </button>
             </DialogTrigger>
-            <DialogContent className="glass-panel bg-zinc-950 text-white border-white/10 w-[calc(100%-2rem)] max-w-md sm:w-full">
-              <DialogHeader>
-                <DialogTitle>Delete Account?</DialogTitle>
-                <DialogDescription className="text-zinc-400">
-                  Are you sure you want to delete this account? This action cannot be undone and all historical data will be lost.
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-2 mt-4">
-                <button onClick={() => setShowDelete(false)} className="w-full sm:w-auto px-4 py-3 sm:py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                <button 
-                  onClick={handleDelete} 
-                  className="w-full sm:w-auto px-4 py-3 sm:py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium shadow-lg shadow-red-900/20 transition-colors"
-                  data-testid="button-confirm-delete"
-                >
-                  Delete Permanently
-                </button>
-              </DialogFooter>
+            <DialogContent className="glass-panel border-white/10 bg-zinc-950/90 text-white sm:max-w-[425px] p-0 overflow-hidden">
+              <div className="p-6">
+                <DialogHeader className="mb-4">
+                  <DialogTitle className="text-xl font-bold tracking-tight">Delete Account?</DialogTitle>
+                  <DialogDescription className="text-zinc-400">
+                    Are you sure you want to delete this account? This action cannot be undone and all historical data will be lost.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button onClick={() => setShowDelete(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                  <button 
+                    onClick={handleDelete} 
+                    className="px-6 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-semibold text-sm shadow-lg shadow-red-900/20 transition-colors"
+                    data-testid="button-confirm-delete"
+                  >
+                    Delete Permanently
+                  </button>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
