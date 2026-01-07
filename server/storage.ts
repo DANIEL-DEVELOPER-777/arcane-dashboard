@@ -5,20 +5,18 @@ import {
   type Account,
   type InsertAccount,
   type EquitySnapshot,
-  type AccountWithDailyProfit,
 } from "@shared/schema";
-import { eq, desc, and, sql, gte } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   // Accounts
   getAccounts(): Promise<Account[]>;
-  getAccountsWithDailyProfit(): Promise<AccountWithDailyProfit[]>;
   getAccount(id: number): Promise<Account | undefined>;
   getAccountByToken(token: string): Promise<Account | undefined>;
   createAccount(account: InsertAccount): Promise<Account>;
   updateAccount(id: number, updates: Partial<InsertAccount>): Promise<Account>;
-  updateAccountStats(id: number, balance: number, equity: number, profit: number): Promise<Account>;
+  updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number, dailyProfitPercent?: number): Promise<Account>;
   deleteAccount(id: number): Promise<void>;
 
   // History
@@ -30,45 +28,6 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async getAccounts(): Promise<Account[]> {
     return await db.select().from(accounts).orderBy(desc(accounts.lastUpdated));
-  }
-
-  async getAccountsWithDailyProfit(): Promise<AccountWithDailyProfit[]> {
-    const allAccounts = await this.getAccounts();
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    
-    const accountsWithDailyProfit = await Promise.all(
-      allAccounts.map(async (account) => {
-        // Get earliest snapshot from 24 hours ago for this account
-        const dayAgoSnapshots = await db
-          .select()
-          .from(equitySnapshots)
-          .where(
-            and(
-              eq(equitySnapshots.accountId, account.id),
-              gte(equitySnapshots.timestamp, oneDayAgo)
-            )
-          )
-          .orderBy(equitySnapshots.timestamp)
-          .limit(1);
-        
-        let dailyProfit = 0;
-        let dailyProfitPercent = 0;
-        
-        if (dayAgoSnapshots.length > 0) {
-          const startEquity = dayAgoSnapshots[0].equity;
-          dailyProfit = account.equity - startEquity;
-          dailyProfitPercent = startEquity > 0 ? (dailyProfit / startEquity) * 100 : 0;
-        }
-        
-        return {
-          ...account,
-          dailyProfit,
-          dailyProfitPercent,
-        };
-      })
-    );
-    
-    return accountsWithDailyProfit;
   }
 
   async getAccount(id: number): Promise<Account | undefined> {
@@ -99,7 +58,7 @@ export class DatabaseStorage implements IStorage {
     return account;
   }
 
-  async updateAccountStats(id: number, balance: number, equity: number, profit: number): Promise<Account> {
+  async updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number, dailyProfitPercent?: number): Promise<Account> {
     const profitPercent = balance > 0 ? (profit / balance) * 100 : 0;
     const [account] = await db
       .update(accounts)
@@ -108,6 +67,8 @@ export class DatabaseStorage implements IStorage {
         equity,
         profit,
         profitPercent,
+        dailyProfit: dailyProfit ?? 0,
+        dailyProfitPercent: dailyProfitPercent ?? 0,
         lastUpdated: new Date(),
       })
       .where(eq(accounts.id, id))

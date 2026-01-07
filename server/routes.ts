@@ -69,7 +69,7 @@ export async function registerRoutes(
 
   // --- Account Routes ---
   app.get(api.accounts.list.path, requireAuth, async (req, res) => {
-    const accounts = await storage.getAccountsWithDailyProfit();
+    const accounts = await storage.getAccounts();
     res.json(accounts);
   });
 
@@ -142,14 +142,14 @@ export async function registerRoutes(
   // --- Webhook Route (No Auth Required - Protected by Token) ---
   app.post(api.webhook.mt5.path, async (req, res) => {
     const { token } = req.params;
-    const { balance, equity, profit } = req.body;
+    const { balance, equity, profit, dailyProfit, dailyProfitPercent } = req.body;
 
     const account = await storage.getAccountByToken(token);
     if (!account) {
       return res.status(404).json({ message: "Invalid token" });
     }
 
-    await storage.updateAccountStats(account.id, balance, equity, profit);
+    await storage.updateAccountStats(account.id, balance, equity, profit, dailyProfit, dailyProfitPercent);
     res.json({ status: "ok" });
   });
 

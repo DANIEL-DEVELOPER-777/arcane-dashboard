@@ -1,10 +1,10 @@
-import { AccountWithDailyProfit } from "@shared/schema";
+import { Account } from "@shared/schema";
 import { Link } from "wouter";
 import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
 
 interface AccountCardProps {
-  account: AccountWithDailyProfit;
+  account: Account;
   detailed?: boolean;
 }
 

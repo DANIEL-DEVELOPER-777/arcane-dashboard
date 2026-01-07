@@ -10,6 +10,8 @@ export const accounts = pgTable("accounts", {
   equity: doublePrecision("equity").default(0).notNull(),
   profit: doublePrecision("profit").default(0).notNull(),
   profitPercent: doublePrecision("profit_percent").default(0).notNull(),
+  dailyProfit: doublePrecision("daily_profit").default(0).notNull(),
+  dailyProfitPercent: doublePrecision("daily_profit_percent").default(0).notNull(),
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
@@ -41,7 +43,3 @@ export interface PortfolioSummary {
   totalProfitPercent: number;
 }
 
-export interface AccountWithDailyProfit extends Account {
-  dailyProfit: number;
-  dailyProfitPercent: number;
-}
