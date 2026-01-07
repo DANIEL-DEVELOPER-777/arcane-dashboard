@@ -124,7 +124,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
             />
             <Area 
               type="monotone" 
-              dataKey="equity" 
+              dataKey="balance" 
               stroke="#fff" 
               strokeWidth={2}
               fillOpacity={1} 
