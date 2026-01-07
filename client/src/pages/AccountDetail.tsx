@@ -4,7 +4,7 @@ import { EquityChart } from "@/components/EquityChart";
 import { useAccount, useAccountHistory, useUpdateAccount, useDeleteAccount } from "@/hooks/use-accounts";
 import { useRoute, Redirect, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, Copy, Trash2, Edit2, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, Copy, Trash2, Edit2, Check, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
 import { useState } from "react";
 import { clsx } from "clsx";
 import { Link } from "wouter";

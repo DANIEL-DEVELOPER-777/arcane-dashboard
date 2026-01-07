@@ -5,7 +5,7 @@ import { AccountCard } from "@/components/AccountCard";
 import { usePortfolioSummary, usePortfolioHistory, useAccounts } from "@/hooks/use-accounts";
 import { Link, Redirect } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
 import { useState } from "react";
 import { clsx } from "clsx";
 
@@ -51,7 +51,7 @@ export default function Dashboard() {
         <motion.div variants={item} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div>
             <h2 className="text-zinc-500 text-sm font-medium mb-1">Total Balance</h2>
-            <h1 className="text-2xl md:text-3xl font-bold text-white/70 tracking-tight">
+            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
               {isLoading ? "..." : formatCurrency(summary?.totalBalance || 0)}
             </h1>
           </div>
@@ -61,10 +61,10 @@ export default function Dashboard() {
               "text-3xl md:text-4xl font-bold flex items-center gap-2",
               (summary?.totalProfit || 0) >= 0 ? "text-emerald-400" : "text-rose-400"
             )}>
-              {(summary?.totalProfit || 0) >= 0 ? <ArrowUpRight className="w-8 h-8 md:w-10 md:h-10" /> : <ArrowDownRight className="w-8 h-8 md:w-10 md:h-10" />}
+              {(summary?.totalProfit || 0) >= 0 ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : <TrendingDown className="w-8 h-8 md:w-10 md:h-10" />}
               <span>{formatCurrency(summary?.totalProfit || 0)}</span>
               <span className="text-lg bg-white/10 px-3 py-1 rounded-lg ml-1">
-                {(summary?.totalProfitPercent || 0).toFixed(2)}%
+                {summary?.totalProfitPercent !== undefined ? (summary.totalProfitPercent >= 0 ? "+" : "-") : ""}{Math.abs(summary?.totalProfitPercent || 0).toFixed(2)}%
               </span>
             </div>
           </div>

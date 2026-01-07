@@ -16,7 +16,7 @@ interface EquityChartProps {
 }
 
 export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProps) {
-  const [activePeriod, setActivePeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("ALL");
+  const [activePeriod, setActivePeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
 
   const handlePeriodChange = (period: "1D" | "1W" | "1M" | "1Y" | "ALL") => {
     setActivePeriod(period);
@@ -65,10 +65,6 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       {/* Header with period toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
         <div>
-          <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Equity Curve</h3>
-          <div className="text-2xl md:text-3xl font-bold tracking-tight text-white">
-            {data.length > 0 ? formatCurrency(data[data.length - 1].equity) : "$0.00"}
-          </div>
         </div>
         
         <div className="flex bg-black/20 backdrop-blur-md rounded-full p-1 border border-white/5 w-full sm:w-auto overflow-x-auto no-scrollbar">
