@@ -69,7 +69,7 @@ export async function registerRoutes(
 
   // --- Account Routes ---
   app.get(api.accounts.list.path, requireAuth, async (req, res) => {
-    const accounts = await storage.getAccounts();
+    const accounts = await storage.getAccountsWithDailyProfit();
     res.json(accounts);
   });
 

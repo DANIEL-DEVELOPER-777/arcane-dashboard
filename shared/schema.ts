@@ -40,3 +40,8 @@ export interface PortfolioSummary {
   totalProfit: number;
   totalProfitPercent: number;
 }
+
+export interface AccountWithDailyProfit extends Account {
+  dailyProfit: number;
+  dailyProfitPercent: number;
+}

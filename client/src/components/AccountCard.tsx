@@ -1,15 +1,17 @@
-import { Account } from "@shared/schema";
+import { AccountWithDailyProfit } from "@shared/schema";
 import { Link } from "wouter";
 import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
 
 interface AccountCardProps {
-  account: Account;
+  account: AccountWithDailyProfit;
   detailed?: boolean;
 }
 
 export function AccountCard({ account, detailed = false }: AccountCardProps) {
-  const isProfit = account.profit >= 0;
+  const dailyProfit = account.dailyProfit ?? 0;
+  const dailyProfitPercent = account.dailyProfitPercent ?? 0;
+  const isProfit = dailyProfit >= 0;
   
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
@@ -42,15 +44,15 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
           </div>
           
           <div className="pt-4 border-t border-white/5">
-            <p className="text-muted-foreground text-xs mb-1">Profit</p>
+            <p className="text-muted-foreground text-xs mb-1">Daily Profit</p>
             <div className={clsx(
               "flex items-center gap-2 font-bold text-xl",
               isProfit ? "text-emerald-400" : "text-rose-400"
             )}>
               {isProfit ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-              <span>{formatCurrency(account.profit)}</span>
+              <span>{formatCurrency(dailyProfit)}</span>
               <span className="text-sm bg-white/[0.03] px-2 py-0.5 rounded-md">
-                {account.profitPercent > 0 ? "+" : ""}{account.profitPercent.toFixed(2)}%
+                {dailyProfitPercent >= 0 ? "+" : ""}{dailyProfitPercent.toFixed(2)}%
               </span>
             </div>
           </div>

@@ -5,13 +5,15 @@ import {
   type Account,
   type InsertAccount,
   type EquitySnapshot,
+  type AccountWithDailyProfit,
 } from "@shared/schema";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, gte } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   // Accounts
   getAccounts(): Promise<Account[]>;
+  getAccountsWithDailyProfit(): Promise<AccountWithDailyProfit[]>;
   getAccount(id: number): Promise<Account | undefined>;
   getAccountByToken(token: string): Promise<Account | undefined>;
   createAccount(account: InsertAccount): Promise<Account>;
@@ -28,6 +30,45 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async getAccounts(): Promise<Account[]> {
     return await db.select().from(accounts).orderBy(desc(accounts.lastUpdated));
+  }
+
+  async getAccountsWithDailyProfit(): Promise<AccountWithDailyProfit[]> {
+    const allAccounts = await this.getAccounts();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const accountsWithDailyProfit = await Promise.all(
+      allAccounts.map(async (account) => {
+        // Get earliest snapshot from 24 hours ago for this account
+        const dayAgoSnapshots = await db
+          .select()
+          .from(equitySnapshots)
+          .where(
+            and(
+              eq(equitySnapshots.accountId, account.id),
+              gte(equitySnapshots.timestamp, oneDayAgo)
+            )
+          )
+          .orderBy(equitySnapshots.timestamp)
+          .limit(1);
+        
+        let dailyProfit = 0;
+        let dailyProfitPercent = 0;
+        
+        if (dayAgoSnapshots.length > 0) {
+          const startEquity = dayAgoSnapshots[0].equity;
+          dailyProfit = account.equity - startEquity;
+          dailyProfitPercent = startEquity > 0 ? (dailyProfit / startEquity) * 100 : 0;
+        }
+        
+        return {
+          ...account,
+          dailyProfit,
+          dailyProfitPercent,
+        };
+      })
+    );
+    
+    return accountsWithDailyProfit;
   }
 
   async getAccount(id: number): Promise<Account | undefined> {
