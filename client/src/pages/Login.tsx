@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -69,12 +70,11 @@ export default function Login() {
             </div>
 
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="rememberMe"
                 checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-3.5 h-3.5 rounded bg-zinc-800/50 border border-zinc-600/50 text-white focus:ring-0 focus:ring-offset-0 accent-white cursor-pointer"
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+                className="h-4 w-4 border-zinc-600/50 bg-zinc-800/50 data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=checked]:border-white"
                 data-testid="checkbox-remember-me"
               />
               <label 
