@@ -62,7 +62,7 @@ export default function Dashboard() {
             </h1>
           </div>
           <div className="w-full md:w-auto">
-            <p className="text-zinc-400 font-medium mb-1">Profit ({period})</p>
+            <p className="text-zinc-400 font-medium mb-1">Profit ({period === "ALL" ? "All" : period.replace("1", "")})</p>
             <div className={clsx(
               "text-3xl md:text-4xl font-bold flex items-center gap-2",
               (summary?.totalProfit || 0) >= 0 ? "text-emerald-400" : "text-rose-400"

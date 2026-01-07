@@ -15,6 +15,14 @@ interface EquityChartProps {
   isLoading?: boolean;
 }
 
+const periodLabels: Record<string, string> = {
+  "1D": "D",
+  "1W": "W", 
+  "1M": "M",
+  "1Y": "Y",
+  "ALL": "All"
+};
+
 export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProps) {
   const [activePeriod, setActivePeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
 
@@ -48,7 +56,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                     : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white"
                 )}
               >
-                {p}
+                {periodLabels[p]}
               </button>
             ))}
           </div>
@@ -79,7 +87,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                   : "text-muted-foreground hover:text-white"
               )}
             >
-              {p}
+              {periodLabels[p]}
             </button>
           ))}
         </div>
