@@ -120,7 +120,7 @@ export default function AccountDetail() {
             )}>
               {isProfit ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : <TrendingDown className="w-8 h-8 md:w-10 md:h-10" />}
               <span>{formatCurrency(account?.profit || 0)}</span>
-              <span className="text-lg bg-white/10 px-3 py-1 rounded-lg ml-1">
+              <span className="text-lg bg-white/5 px-3 py-1 rounded-lg ml-1">
                 {account?.profitPercent !== undefined ? (account.profitPercent >= 0 ? "+" : "-") : ""}{Math.abs(account?.profitPercent || 0).toFixed(2)}%
               </span>
             </div>

@@ -50,15 +50,12 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
             )}>
               {isProfit ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
               <span>{formatCurrency(account.profit)}</span>
-              <span className="text-sm bg-white/10 px-2 py-0.5 rounded-md">
+              <span className="text-sm bg-white/5 px-2 py-0.5 rounded-md">
                 {account.profitPercent > 0 ? "+" : ""}{account.profitPercent.toFixed(2)}%
               </span>
             </div>
           </div>
         </div>
-        
-        {/* Decorative background blur */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 blur-3xl rounded-full group-hover:bg-white/10 transition-all duration-500" />
       </div>
     </Link>
   );
