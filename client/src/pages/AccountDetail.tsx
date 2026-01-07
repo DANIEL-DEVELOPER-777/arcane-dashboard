@@ -106,7 +106,7 @@ export default function AccountDetail() {
         </div>
 
         {/* Live Results Indicator */}
-        <div className="flex items-center gap-2" data-testid="live-results-indicator">
+        <div className="inline-flex items-center gap-2 bg-white/[0.03] px-3 py-1.5 rounded-lg" data-testid="live-results-indicator">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-sm font-medium text-emerald-400">Live Results</span>
         </div>
