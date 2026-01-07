@@ -48,9 +48,12 @@ export default function Dashboard() {
         className="space-y-8"
       >
         {/* Portfolio Results Header */}
-        <motion.div variants={item} className="flex items-center gap-3">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Portfolio Results</h1>
+        <motion.div variants={item}>
+          <div className="flex items-center gap-3">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight">Portfolio Results</h1>
+          </div>
+          <p className="text-zinc-400 text-xs mt-2 ml-5">From all connected accounts</p>
         </motion.div>
 
         {/* Stats Section */}
