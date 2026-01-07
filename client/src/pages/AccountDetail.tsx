@@ -185,18 +185,18 @@ export default function AccountDetail() {
                 <span>Delete Account</span>
               </button>
             </DialogTrigger>
-            <DialogContent className="glass-panel bg-zinc-950 text-white border-white/10 mx-4 sm:mx-0">
+            <DialogContent className="glass-panel bg-zinc-950 text-white border-white/10 w-[calc(100%-2rem)] max-w-md sm:w-full">
               <DialogHeader>
                 <DialogTitle>Delete Account?</DialogTitle>
                 <DialogDescription className="text-zinc-400">
                   Are you sure you want to delete this account? This action cannot be undone and all historical data will be lost.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className="gap-2 sm:gap-0">
-                <button onClick={() => setShowDelete(false)} className="px-4 py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5">Cancel</button>
+              <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-2 mt-4">
+                <button onClick={() => setShowDelete(false)} className="w-full sm:w-auto px-4 py-3 sm:py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
                 <button 
                   onClick={handleDelete} 
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium shadow-lg shadow-red-900/20"
+                  className="w-full sm:w-auto px-4 py-3 sm:py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium shadow-lg shadow-red-900/20 transition-colors"
                   data-testid="button-confirm-delete"
                 >
                   Delete Permanently
