@@ -67,41 +67,39 @@ export default function AccountDetail() {
       <div className="space-y-8">
         {/* Navigation & Header */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-start gap-3">
-            <Link href="/accounts" className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors shrink-0 mt-1">
+          <div className="flex items-center gap-3">
+            <Link href="/accounts" className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors shrink-0">
               <ArrowLeft className="w-5 h-5 text-zinc-400" />
             </Link>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                {isEditing ? (
-                  <div className="flex items-center gap-2 flex-wrap w-full">
-                    <input 
-                      value={newName} 
-                      onChange={(e) => setNewName(e.target.value)}
-                      placeholder={account?.name}
-                      className="bg-white/10 border border-white/20 rounded px-2 py-1 text-lg md:text-xl font-bold text-white focus:outline-none flex-1 min-w-0"
-                      autoFocus
-                    />
-                    <div className="flex items-center gap-2">
-                      <button onClick={handleUpdate} className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30">
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setIsEditing(false)} className="text-zinc-500 text-sm hover:text-white px-2">Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <h1 className="text-xl md:text-3xl font-bold text-white tracking-tight break-words">{account?.name}</h1>
-                    <button 
-                      onClick={() => { setIsEditing(true); setNewName(account?.name || ""); }}
-                      className="text-zinc-600 hover:text-white transition-colors shrink-0"
-                    >
-                      <Edit2 className="w-4 h-4" />
+              {isEditing ? (
+                <div className="flex items-center gap-2 flex-wrap w-full">
+                  <input 
+                    value={newName} 
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder={account?.name}
+                    className="bg-white/10 border border-white/20 rounded px-2 py-1 text-2xl md:text-3xl font-bold text-white focus:outline-none flex-1 min-w-0"
+                    autoFocus
+                  />
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleUpdate} className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30">
+                      <Check className="w-4 h-4" />
                     </button>
-                  </>
-                )}
-              </div>
+                    <button onClick={() => setIsEditing(false)} className="text-zinc-500 text-sm hover:text-white px-2">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight break-words">{account?.name}</h1>
+              )}
             </div>
+            {!isEditing && (
+              <button 
+                onClick={() => { setIsEditing(true); setNewName(account?.name || ""); }}
+                className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors shrink-0"
+              >
+                <Edit2 className="w-4 h-4 text-zinc-400" />
+              </button>
+            )}
           </div>
         </div>
 
