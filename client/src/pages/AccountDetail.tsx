@@ -90,7 +90,6 @@ export default function AccountDetail() {
                   </div>
                 ) : (
                   <>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <h1 className="text-xl md:text-3xl font-bold text-white tracking-tight break-words">{account?.name}</h1>
                     <button 
                       onClick={() => { setIsEditing(true); setNewName(account?.name || ""); }}

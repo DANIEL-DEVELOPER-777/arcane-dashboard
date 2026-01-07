@@ -24,7 +24,6 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <h3 className="font-medium text-white/90 text-lg tracking-tight">{account.name}</h3>
             </div>
             <p className="text-muted-foreground text-xs font-mono tracking-wider opacity-60">ID: {account.id.toString().padStart(4, '0')}</p>
