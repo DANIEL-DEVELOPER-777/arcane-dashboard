@@ -47,13 +47,13 @@ export default function Dashboard() {
         animate="show"
         className="space-y-8"
       >
-        {/* Live Results Indicator */}
-        <motion.div variants={item} className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 rounded-lg" data-testid="live-results-indicator">
-          <span className="w-2 h-2 rounded-full border-2 border-emerald-500 animate-pulse" />
-          <span className="text-sm font-medium text-emerald-400">Live Results</span>
+        {/* Portfolio Results Header */}
+        <motion.div variants={item} className="flex items-center gap-3">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Portfolio Results</h1>
         </motion.div>
 
-        {/* Header Section */}
+        {/* Stats Section */}
         <motion.div variants={item} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div>
             <h2 className="text-zinc-500 text-sm font-medium mb-1">Total Balance</h2>

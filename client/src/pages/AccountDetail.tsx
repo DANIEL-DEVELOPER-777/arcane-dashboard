@@ -90,6 +90,7 @@ export default function AccountDetail() {
                   </div>
                 ) : (
                   <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <h1 className="text-xl md:text-3xl font-bold text-white tracking-tight break-words">{account?.name}</h1>
                     <button 
                       onClick={() => { setIsEditing(true); setNewName(account?.name || ""); }}
@@ -103,12 +104,6 @@ export default function AccountDetail() {
               <p className="text-zinc-400 text-xs mt-1">ID: {account?.id.toString().padStart(4, '0')} • Updated: {new Date(account?.lastUpdated || "").toLocaleDateString()}</p>
             </div>
           </div>
-        </div>
-
-        {/* Live Results Indicator */}
-        <div className="inline-flex items-center gap-2 border border-white/10 px-3 py-1.5 rounded-lg" data-testid="live-results-indicator">
-          <span className="w-2 h-2 rounded-full border-2 border-emerald-500 animate-pulse" />
-          <span className="text-sm font-medium text-emerald-400">Live Results</span>
         </div>
 
         {/* Stats Summary */}
