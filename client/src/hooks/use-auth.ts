@@ -40,6 +40,7 @@ export function useAuth() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.auth.check.path] });
+      window.scrollTo(0, 0);
       setLocation("/");
     },
   });

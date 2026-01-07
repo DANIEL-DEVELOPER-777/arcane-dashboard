@@ -64,15 +64,6 @@ export default function AccountDetail() {
   return (
     <Layout>
       <div className="space-y-8">
-        {/* Live Results Indicator */}
-        <div className="flex items-center gap-2" data-testid="live-results-indicator">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-          </span>
-          <span className="text-sm font-medium text-emerald-400">Live Results</span>
-        </div>
-
         {/* Navigation & Header */}
         <div className="flex flex-col gap-4">
           <div className="flex items-start gap-3">
@@ -114,23 +105,29 @@ export default function AccountDetail() {
           </div>
         </div>
 
+        {/* Live Results Indicator */}
+        <div className="flex items-center gap-2" data-testid="live-results-indicator">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-sm font-medium text-emerald-400">Live Results</span>
+        </div>
+
         {/* Stats Summary */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
           <div>
             <h2 className="text-zinc-500 text-sm font-medium mb-1">Balance</h2>
             <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
               {accountLoading ? "..." : formatCurrency(account?.balance || 0)}
             </h1>
           </div>
-          <div>
+          <div className="w-full md:w-auto">
             <p className="text-zinc-400 font-medium mb-1">Profit ({period})</p>
             <div className={clsx(
-              "text-2xl md:text-4xl font-bold flex items-center gap-2 flex-wrap",
+              "text-3xl md:text-4xl font-bold flex items-center gap-2",
               isProfit ? "text-emerald-400" : "text-rose-400"
             )}>
-              {isProfit ? <TrendingUp className="w-6 h-6 md:w-10 md:h-10" /> : <TrendingDown className="w-6 h-6 md:w-10 md:h-10" />}
+              {isProfit ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : <TrendingDown className="w-8 h-8 md:w-10 md:h-10" />}
               <span>{formatCurrency(account?.profit || 0)}</span>
-              <span className="text-base md:text-lg bg-white/[0.03] px-2 md:px-3 py-0.5 md:py-1 rounded-lg">
+              <span className="text-lg bg-white/[0.03] px-3 py-1 rounded-lg ml-1">
                 {account?.profitPercent !== undefined ? (account.profitPercent >= 0 ? "+" : "-") : ""}{Math.abs(account?.profitPercent || 0).toFixed(2)}%
               </span>
             </div>

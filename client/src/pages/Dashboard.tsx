@@ -49,10 +49,7 @@ export default function Dashboard() {
       >
         {/* Live Results Indicator */}
         <motion.div variants={item} className="flex items-center gap-2" data-testid="live-results-indicator">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-          </span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-sm font-medium text-emerald-400">Live Results</span>
         </motion.div>
 
