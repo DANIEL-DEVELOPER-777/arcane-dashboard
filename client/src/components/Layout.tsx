@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Home, Wallet, Menu, X } from "lucide-react";
+import { LogOut, Home, Wallet, Menu } from "lucide-react";
 import { clsx } from "clsx";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +10,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { logout } = useAuth();
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    mainRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [location]);
 
   const handleLogout = () => {
     logout.mutate();
@@ -70,13 +76,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-              {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              <Menu className="w-6 h-6" />
             </Button>
           </SheetTrigger>
           <SheetContent side="top" className="p-0 bg-zinc-950 border-b border-white/10 h-auto max-h-[80vh]">
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <div className="flex flex-col">
-              <div className="px-4 py-4 space-y-2">
+              <div className="px-4 pt-12 pb-4 space-y-2">
                 {navItems.map((item) => (
                   <Link 
                     key={item.href} 
@@ -120,7 +126,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 md:overflow-y-auto relative">
+        <main ref={mainRef} className="flex-1 md:overflow-y-auto relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
             {children}
           </div>
