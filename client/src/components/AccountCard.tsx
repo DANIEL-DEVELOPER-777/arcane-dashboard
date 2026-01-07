@@ -50,7 +50,7 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
             )}>
               {isProfit ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
               <span>{formatCurrency(account.profit)}</span>
-              <span className="text-sm bg-white/5 px-2 py-0.5 rounded-md">
+              <span className="text-sm bg-white/[0.03] px-2 py-0.5 rounded-md">
                 {account.profitPercent > 0 ? "+" : ""}{account.profitPercent.toFixed(2)}%
               </span>
             </div>

@@ -63,7 +63,7 @@ export default function Dashboard() {
             )}>
               {(summary?.totalProfit || 0) >= 0 ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : <TrendingDown className="w-8 h-8 md:w-10 md:h-10" />}
               <span>{formatCurrency(summary?.totalProfit || 0)}</span>
-              <span className="text-lg bg-white/5 px-3 py-1 rounded-lg ml-1">
+              <span className="text-lg bg-white/[0.03] px-3 py-1 rounded-lg ml-1">
                 {summary?.totalProfitPercent !== undefined ? (summary.totalProfitPercent >= 0 ? "+" : "-") : ""}{Math.abs(summary?.totalProfitPercent || 0).toFixed(2)}%
               </span>
             </div>

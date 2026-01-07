@@ -14,7 +14,13 @@ function ScrollToTop() {
   const [location] = useLocation();
   
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Use requestAnimationFrame to ensure DOM is ready, then scroll
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      // Also scroll the document element and body for mobile compatibility
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    });
   }, [location]);
   
   return null;
