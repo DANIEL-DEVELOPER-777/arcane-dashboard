@@ -74,7 +74,7 @@ export default function Login() {
                 id="rememberMe"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-3.5 h-3.5 rounded bg-zinc-800/50 border border-zinc-600/50 text-zinc-500 focus:ring-0 focus:ring-offset-0 accent-zinc-500 cursor-pointer"
+                className="w-3.5 h-3.5 rounded bg-zinc-800/50 border border-zinc-600/50 text-white focus:ring-0 focus:ring-offset-0 accent-white cursor-pointer"
                 data-testid="checkbox-remember-me"
               />
               <label 
