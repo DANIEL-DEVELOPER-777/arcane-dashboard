@@ -71,7 +71,7 @@ export function AddAccountDialog() {
               {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex justify-center gap-3 pt-4">
               <button
                 type="button"
                 onClick={() => setOpen(false)}
