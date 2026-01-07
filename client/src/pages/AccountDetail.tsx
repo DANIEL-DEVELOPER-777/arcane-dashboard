@@ -101,7 +101,6 @@ export default function AccountDetail() {
                   </>
                 )}
               </div>
-              <p className="text-zinc-400 text-xs mt-1">Updated: {new Date(account?.lastUpdated || "").toLocaleDateString()}</p>
             </div>
           </div>
         </div>
