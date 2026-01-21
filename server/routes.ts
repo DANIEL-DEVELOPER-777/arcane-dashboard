@@ -38,7 +38,7 @@ export async function registerRoutes(
   app.post(api.auth.login.path, (req, res) => {
     const { username, password, rememberMe } = req.body;
     // Hardcoded credentials as requested
-    if (username === "NoahX36" && password === "NoahXArcane!36$2001") {
+    if (username === "NoahX36" && password === "ArcaneX36$!Noah100922") {
       (req.session as any).user = { username };
       // If "keep me signed in" is checked, set cookie to 1 year
       if (rememberMe) {
