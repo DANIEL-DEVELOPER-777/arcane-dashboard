@@ -106,8 +106,13 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       return { start, end };
     }
     // ALL: use earliest data point (first trade or snapshot) as start and now as end
-    const earliest = sortedData && sortedData.length ? sortedData[0].ts! : undefined;
-    return { start: earliest ?? Date.now(), end: Date.now() };
+    // Filter out obviously-bogus timestamps (seconds-based threshold -> year 2001)
+    const MIN_VALID_SECONDS = 1000000000; // 2001-09-09
+    // Ensure ts is normalized to milliseconds when checking
+    const normalized = (sortedData ?? []).map(d => ({ ...d, ts: d.ts! < 1e11 ? d.ts! * 1000 : d.ts! }));
+    const validData = normalized.filter(d => (d.ts ?? 0) > MIN_VALID_SECONDS * 1000);
+    const minTs = validData.length > 0 ? Math.min(...validData.map(d => d.ts!)) : Date.now();
+    return { start: minTs, end: Date.now() };
   };
 
   const { start: periodStart, end: periodEnd } = computePeriodRange(activePeriod);

@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
 import { formatCurrency, formatPercent } from "@/lib/format";
 import { useAccountHistory, useAccountProfit } from "@/hooks/use-accounts";
+import { format } from "date-fns";
 
 interface AccountCardProps {
   account: Account;
@@ -32,7 +33,19 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
         "border border-white/5 hover:border-white/20"
       )}>
         <div className="flex justify-between items-center mb-6 gap-2">
-          <h3 className="font-bold text-white/90 text-2xl md:text-lg tracking-tight">{account.name}</h3>
+          <div>
+            <h3 className="font-bold text-white/90 text-2xl md:text-lg tracking-tight">{account.name}</h3>
+            {/* Show last synced time when available; otherwise indicate syncing */}
+            {(() => {
+              const lu = account.lastUpdated;
+              const valid = lu && (typeof lu === 'string' || typeof lu === 'number' || lu instanceof Date) && new Date(lu as any).getTime() > 1000000000000;
+              return (
+                <p className="text-muted-foreground text-xs mt-1">
+                  {valid ? format(new Date(lu as any), 'MMM d, yyyy') : 'Syncing...'}
+                </p>
+              );
+            })()}
+          </div>
           {detailed && (
             <div className="bg-white/5 rounded-full p-2 shrink-0">
               <ArrowRight className="w-5 h-5 text-zinc-400" />
@@ -43,7 +56,15 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
         <div className="space-y-4">
           <div>
             <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Balance</p>
-            <p className="text-2xl font-bold text-white tracking-tight">{formatCurrency(account.balance)}</p>
+            {(() => {
+              const lu = account.lastUpdated;
+              const synced = lu && (typeof lu === 'string' || typeof lu === 'number' || lu instanceof Date) && new Date(lu as any).getTime() > 1000000000000;
+              return (
+                <p className="text-2xl font-bold text-white tracking-tight">
+                  {synced ? formatCurrency(account.balance) : <span className="text-muted-foreground">Syncing...</span>}
+                </p>
+              );
+            })()}
           </div>
           
           <div className="pt-4 border-t border-white/5">
