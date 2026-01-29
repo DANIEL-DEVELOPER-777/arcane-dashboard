@@ -1,13 +1,19 @@
 //+------------------------------------------------------------------+
-//| Arcane_Full_History_Sync.mq5                                     |
-//| Script: Run this ONCE to upload all past history                 |
+//|                                   Arcane_Full_History_Sync.mq5   |
+//| Script: Run this ONCE to upload all past history using one URL   |
 //+------------------------------------------------------------------+
 #property script_show_inputs
+#property strict
 
-input string ServerURL = "http://18.134.126.63:5000"; 
-input string Token = "0f73c586-13cf-4252-be59-5523a273e628"; 
+// Simply paste the full URL from the dashboard here
+input string WebhookURL = "http://18.134.126.63:5000/api/webhook/mt5/192a28a5-33b4-4100-8ae2-55831986eca0"; 
 
 void OnStart() {
+   if(WebhookURL == "" || WebhookURL == "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE") {
+      Alert("Error: Please paste your specific Webhook URL from the Arcane Dashboard.");
+      return;
+   }
+
    Print("=== Arcane History Sync Started ===");
 
    // 1. Select Entire Account History
@@ -27,17 +33,15 @@ void OnStart() {
       long entry = HistoryDealGetInteger(ticket, DEAL_ENTRY);
       double profit = HistoryDealGetDouble(ticket, DEAL_PROFIT);
       
-      // Filter: We only want closed trades (Entry Out) that aren't zero-value ops
+      // Filter: We only want closed trades (Entry Out)
       if(entry == DEAL_ENTRY_OUT) {
          long time = HistoryDealGetInteger(ticket, DEAL_TIME);
          double swap = HistoryDealGetDouble(ticket, DEAL_SWAP);
          double comm = HistoryDealGetDouble(ticket, DEAL_COMMISSION);
          double totalProfit = profit + swap + comm;
 
-         // Add comma if not the first item
          if(count > 0) jsonPayload += ",";
          
-         // Format: {"t": timestamp, "p": profit}
          jsonPayload += StringFormat("{\"t\":%lld,\"p\":%.2f}", time, totalProfit);
          count++;
       }
@@ -50,41 +54,45 @@ void OnStart() {
       SendToServer(jsonPayload);
    } else {
       Print("No historical trades found.");
+      // Even if no trades, send the current balance snapshot
+      SendStatus();
    }
 }
 
 void SendToServer(string json) {
-   string url = ServerURL + "/api/webhook/mt5/" + Token; // Ensure your server handles arrays!
-   
    char postData[];
    StringToCharArray(json, postData, 0, WHOLE_ARRAY, CP_UTF8);
    
-   // --- FIX FOR ERROR 400 ---
-   // Remove the null terminator byte from the end
+   // Fix for JSON Parsing: Remove null terminator
    if(ArraySize(postData) > 0) ArrayResize(postData, ArraySize(postData) - 1);
-   // -------------------------
 
    string headers = "Content-Type: application/json\r\n";
    char result[];
    string responseHeaders;
 
-   int code = WebRequest("POST", url, headers, 10000, postData, result, responseHeaders);
+   int code = WebRequest("POST", WebhookURL, headers, 10000, postData, result, responseHeaders);
    
-   if(code == 200) Print("SUCCESS: History Uploaded.");
-   else PrintFormat("ERROR: Server returned %d", code);
+   if(code == 200) {
+      Print("SUCCESS: History Uploaded.");
+      SendStatus(); // Send balance after successful history upload
+   }
+   else PrintFormat("ERROR: Server returned %d. Check if URL is whitelisted.", code);
+}
 
-   // Also send a status snapshot (balance/equity) so the server records initial deposit / latest balance
+void SendStatus() {
    double balance = AccountInfoDouble(ACCOUNT_BALANCE);
    double equity = AccountInfoDouble(ACCOUNT_EQUITY);
-   double profit = equity - balance; // approximate
-   double dailyProfit = profit; // best-effort
-   string statusJson = StringFormat("{\"balance\":%.2f,\"equity\":%.2f,\"profit\":%.2f,\"dailyProfit\":%.2f}", balance, equity, profit, dailyProfit);
+   
+   string statusJson = StringFormat("{\"balance\":%.2f,\"equity\":%.2f}", balance, equity);
 
    char statusData[];
    StringToCharArray(statusJson, statusData, 0, WHOLE_ARRAY, CP_UTF8);
    if(ArraySize(statusData) > 0) ArrayResize(statusData, ArraySize(statusData) - 1);
 
-   int code2 = WebRequest("POST", url, headers, 10000, statusData, result, responseHeaders);
-   if(code2 == 200) Print("SUCCESS: Status snapshot uploaded.");
-   else PrintFormat("ERROR: Status snapshot failed %d", code2);
+   string headers = "Content-Type: application/json\r\n";
+   char result[];
+   string responseHeaders;
+
+   int code2 = WebRequest("POST", WebhookURL, headers, 10000, statusData, result, responseHeaders);
+   if(code2 == 200) Print("SUCCESS: Account balance synced.");
 }

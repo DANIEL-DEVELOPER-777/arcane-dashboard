@@ -188,10 +188,10 @@ export async function registerRoutes(
     // We'll collect results here
     const results: any[] = [];
 
-    // If snapshots are all zeros (e.g. imported snapshots with zero values), prefer trade history
+    // If period is not ALL or snapshots are all zeros, prefer trade history (do NOT use snapshots for timeframe charts)
     const hasNonZeroSnapshot = snapshots.some(s => Number(s.balance) !== 0 || Number(s.equity) !== 0);
-    if (snapshots.length === 0 || !hasNonZeroSnapshot) {
-      // Fallback to trade history (if any) and build synthetic progression
+    if (period !== "ALL" || snapshots.length === 0 || !hasNonZeroSnapshot) {
+      // Use trade history (even if snapshots exist) and build synthetic progression
       const trades = await storage.getTradesInRange(accountId, start, end);
 
       // Start cumulative at the sum of trades before start (so chart frames correctly)

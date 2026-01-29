@@ -1,5 +1,5 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { format } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, addHours, addDays, addMonths } from "date-fns";
 import { useState } from "react";
 import { clsx } from "clsx";
 
@@ -86,6 +86,44 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
   // Ensure points are sorted by timestamp so domain starts at the exact first trade
   const sortedData = numericData ? [...numericData].sort((a,b) => (a.ts! - b.ts!)) : undefined;
 
+  const domainMin = sortedData && sortedData.length ? sortedData[0].ts! : undefined;
+  const domainMax = sortedData && sortedData.length ? sortedData[sortedData.length - 1].ts! : Date.now();
+
+  // Generate ticks based on active period
+  const generateTicks = (min: number | undefined, max: number, period: string) => {
+    if (!min) return [] as number[];
+    const ticks: number[] = [];
+    if (period === "1D") {
+      const start = startOfDay(new Date(min)).getTime();
+      for (let t = start; t <= max; t += 3600000) ticks.push(t);
+    } else if (period === "1W") {
+      const start = startOfWeek(new Date(min), { weekStartsOn: 1 }).getTime();
+      for (let t = start; t <= max; t += 86400000) ticks.push(t);
+    } else if (period === "1M") {
+      const start = startOfMonth(new Date(min)).getTime();
+      for (let t = start; t <= max; t = addDays(new Date(t), 7).getTime()) ticks.push(t);
+    } else if (period === "1Y") {
+      const start = new Date(new Date(min).getFullYear(), 0, 1).getTime();
+      for (let m = 0; ; m++) {
+        const dt = addMonths(new Date(start), m).getTime();
+        if (dt > max) break;
+        ticks.push(new Date(dt).getTime());
+      }
+    } else {
+      // ALL: monthly ticks from start month to max
+      const start = new Date(new Date(min).getFullYear(), new Date(min).getMonth(), 1).getTime();
+      for (let m = 0; ; m++) {
+        const dt = addMonths(new Date(start), m).getTime();
+        if (dt > max) break;
+        ticks.push(new Date(dt).getTime());
+      }
+    }
+    return ticks;
+  };
+
+  const ticks = generateTicks(domainMin, domainMax, activePeriod);
+
+
   return (
     <div className="glass-panel rounded-3xl p-4 md:p-8 relative overflow-hidden group">
       {/* Header with period toggle */}
@@ -126,11 +164,22 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#666', fontSize: 10 }}
-              tickFormatter={(val) => format(new Date(Number(val)), activePeriod === "1D" ? "HH:mm" : (activePeriod === "ALL" ? "MMM yyyy" : "MMM d"))}
+              tickFormatter={(val) => {
+                if (activePeriod === '1D') return format(new Date(Number(val)), 'HH:mm');
+                if (activePeriod === '1W') return format(new Date(Number(val)), 'EEE');
+                if (activePeriod === '1M') {
+                  const monthStart = startOfMonth(new Date(domainMin || Number(val)));
+                  const weekNum = Math.floor((Number(val) - monthStart.getTime()) / (7 * 24 * 3600000)) + 1;
+                  return `Week ${weekNum}`;
+                }
+                if (activePeriod === '1Y') return format(new Date(Number(val)), 'MMM');
+                return format(new Date(Number(val)), 'MMM yyyy');
+              }}
               minTickGap={20}
-              domain={["dataMin", "dataMax"]}
+              domain={[(domainMin ?? 'dataMin') as any, 'dataMax']}
               type="number"
               scale="time"
+              ticks={ticks}
             />
             <YAxis 
               hide

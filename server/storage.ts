@@ -132,6 +132,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteAccount(id: number): Promise<void> {
+    // Delete child records first to avoid FK constraint errors
+    await db.delete(trades).where(eq(trades.accountId, id));
     await db.delete(equitySnapshots).where(eq(equitySnapshots.accountId, id));
     await db.delete(accounts).where(eq(accounts.id, id));
   }
