@@ -2,6 +2,7 @@ import { Account } from "@shared/schema";
 import { Link } from "wouter";
 import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 interface AccountCardProps {
   account: Account;
@@ -12,9 +13,6 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
   const dailyProfit = account.dailyProfit ?? 0;
   const dailyProfitPercent = account.dailyProfitPercent ?? 0;
   const isProfit = dailyProfit >= 0;
-  
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
   return (
     <Link href={`/accounts/${account.id}`} className="block h-full group">
@@ -46,9 +44,7 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
             )}>
               {isProfit ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
               <span>{formatCurrency(dailyProfit)}</span>
-              <span className="text-sm bg-white/[0.03] px-2 py-0.5 rounded-md">
-                {dailyProfitPercent >= 0 ? "+" : ""}{dailyProfitPercent.toFixed(2)}%
-              </span>
+              <span className="text-sm bg-white/[0.03] px-2 py-0.5 rounded-md">{formatPercent(dailyProfitPercent)}</span>
             </div>
           </div>
         </div>

@@ -75,13 +75,13 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
         <div>
         </div>
         
-        <div className="flex bg-black/20 backdrop-blur-md rounded-full p-1 border border-white/5 w-full sm:w-auto overflow-x-auto no-scrollbar">
+        <div className="flex bg-black/20 backdrop-blur-md rounded-full p-1 border border-white/5 w-auto overflow-x-auto no-scrollbar">
           {["1D", "1W", "1M", "1Y", "ALL"].map((p) => (
             <button
               key={p}
               onClick={() => handlePeriodChange(p as any)}
               className={clsx(
-                "flex-1 sm:flex-none px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium transition-all duration-300 whitespace-nowrap",
+                "sm:flex-none px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium transition-all duration-300 whitespace-nowrap",
                 activePeriod === p 
                   ? "bg-white text-black shadow-lg shadow-white/10" 
                   : "text-muted-foreground hover:text-white"

@@ -108,6 +108,7 @@ export const api = {
     summary: {
       method: "GET" as const,
       path: "/api/portfolio/summary",
+      input: z.object({ period: z.enum(["1D", "1W", "1M", "1Y", "ALL"]).optional() }).optional(),
       responses: {
         200: z.object({
           totalBalance: z.number(),
@@ -142,6 +143,7 @@ export const api = {
         balance: z.number(),
         equity: z.number(),
         profit: z.number(),
+        dailyProfit: z.number().optional(),
       }),
       responses: {
         200: z.object({ status: z.string() }),

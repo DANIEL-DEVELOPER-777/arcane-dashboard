@@ -11,6 +11,7 @@ import { clsx } from "clsx";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency, formatPercent } from "@/lib/format";
 
 export default function AccountDetail() {
   const { user, isLoading: authLoading } = useAuth();
@@ -57,10 +58,13 @@ export default function AccountDetail() {
     setLocation("/accounts");
   };
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-
-  const isProfit = (account?.profit || 0) >= 0;
+  // Derive profit from MT5 history, not local account fields
+  const hist = history || [];
+  const startBalance = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
+  const endBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
+  const derivedProfit = endBalance - startBalance;
+  const derivedProfitPercent = (endBalance - derivedProfit) > 0 ? (derivedProfit / (endBalance - derivedProfit)) * 100 : 0;
+  const isProfit = derivedProfit >= 0;
 
   return (
     <Layout>
@@ -118,10 +122,8 @@ export default function AccountDetail() {
               isProfit ? "text-emerald-400" : "text-rose-400"
             )}>
               {isProfit ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : <TrendingDown className="w-8 h-8 md:w-10 md:h-10" />}
-              <span>{formatCurrency(account?.profit || 0)}</span>
-              <span className="text-lg bg-white/[0.03] px-3 py-1 rounded-lg ml-1">
-                {account?.profitPercent !== undefined ? (account.profitPercent >= 0 ? "+" : "-") : ""}{Math.abs(account?.profitPercent || 0).toFixed(2)}%
-              </span>
+              <span>{formatCurrency(derivedProfit)}</span>
+              <span className="text-lg bg-white/[0.03] px-3 py-1 rounded-lg ml-1">{formatPercent(derivedProfitPercent)}</span>
             </div>
           </div>
         </div>

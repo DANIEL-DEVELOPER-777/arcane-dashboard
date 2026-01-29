@@ -106,40 +106,136 @@ export async function registerRoutes(
   });
 
   app.get(api.accounts.history.path, requireAuth, async (req, res) => {
-    const history = await storage.getAccountHistory(Number(req.params.id));
-    res.json(history);
+    const accountId = Number(req.params.id);
+    const period = (req.query.period as string | undefined) ?? "ALL";
+
+    // compute broker-time start/end using server timezone
+    const { start, end } = (() => {
+      const now = new Date();
+      const startOfDay = (d: Date) => { const s = new Date(d); s.setHours(0,0,0,0); return s; };
+      const endOfDay = (d: Date) => { const e = new Date(d); e.setHours(23,59,59,999); return e; };
+      if (period === "1D") return { start: startOfDay(now), end: endOfDay(now) };
+      if (period === "1W") {
+        const day = now.getDay(); // 0=Sunday
+        const diffToMonday = (day + 6) % 7; // days since Monday
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diffToMonday);
+        monday.setHours(0,0,0,0);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23,59,59,999);
+        return { start: monday, end: sunday };
+      }
+      if (period === "1M") {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return { start, end };
+      }
+      if (period === "1Y") {
+        const start = new Date(now.getFullYear(), 0, 1, 0,0,0,0);
+        const end = new Date(now.getFullYear(), 11, 31, 23,59,59,999);
+        return { start, end };
+      }
+      return { start: new Date(0), end: new Date() };
+    })();
+
+    const snapshots = await storage.getAccountHistoryInRange(accountId, start, end);
+
+    // Build results and ensure synthetic start/end points aligned to requested broker-time
+    const results: any[] = [];
+
+    // Start point: prefer snapshot at-or-before start, otherwise first snapshot in range, otherwise synthetic using account balance
+    const startSnap = await storage.getAccountSnapshotBeforeOrAt(accountId, start);
+    if (startSnap) {
+      // synthetic point at exact start time using startSnap balance
+      results.push({ id: `s-${accountId}`, accountId, balance: startSnap.balance, equity: startSnap.equity, timestamp: new Date(start) });
+    } else if (snapshots.length > 0) {
+      results.push({ id: `s-${accountId}`, accountId, balance: snapshots[0].balance, equity: snapshots[0].equity, timestamp: new Date(start) });
+    } else {
+      // fallback to current account balance
+      const acct = await storage.getAccount(accountId);
+      results.push({ id: `s-${accountId}`, accountId, balance: acct?.balance ?? 0, equity: acct?.equity ?? 0, timestamp: new Date(start) });
+    }
+
+    // Add actual snapshots in range
+    for (const s of snapshots) results.push(s);
+
+    // End point: choose latest snapshot <= end or use last snapshot or current account balance; place at min(end, now)
+    const now = new Date();
+    const periodEnd = end > now ? now : end;
+    const endSnap = await storage.getAccountSnapshotBeforeOrAt(accountId, end);
+    if (endSnap) {
+      results.push({ id: `e-${accountId}`, accountId, balance: endSnap.balance, equity: endSnap.equity, timestamp: new Date(periodEnd) });
+    } else if (snapshots.length > 0) {
+      results.push({ id: `e-${accountId}`, accountId, balance: snapshots[snapshots.length - 1].balance, equity: snapshots[snapshots.length - 1].equity, timestamp: new Date(periodEnd) });
+    } else {
+      const acct = await storage.getAccount(accountId);
+      results.push({ id: `e-${accountId}`, accountId, balance: acct?.balance ?? 0, equity: acct?.equity ?? 0, timestamp: new Date(periodEnd) });
+    }
+
+    // normalize timestamps to ISO
+    res.json(results.map(r => ({ ...r, timestamp: r.timestamp.toISOString() })));
   });
 
   // --- Portfolio Routes ---
   app.get(api.portfolio.summary.path, requireAuth, async (req, res) => {
+    const period = (req.query.period as string | undefined) ?? "ALL";
     const accounts = await storage.getAccounts();
-    const summary = accounts.reduce(
-      (acc, account) => ({
-        totalBalance: acc.totalBalance + account.balance,
-        totalEquity: acc.totalEquity + account.equity,
-        totalProfit: acc.totalProfit + account.profit,
-        totalDailyProfit: acc.totalDailyProfit + account.dailyProfit,
-      }),
-      { totalBalance: 0, totalEquity: 0, totalProfit: 0, totalDailyProfit: 0 }
-    );
 
-    // Calculate percentage based on starting balance (balance before profit)
-    const totalStartingBalance = summary.totalBalance - summary.totalProfit;
-    const totalProfitPercent = totalStartingBalance > 0 
-      ? (summary.totalProfit / totalStartingBalance) * 100 
-      : 0;
+    const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 
-    res.json({ ...summary, totalProfitPercent });
+    // compute period start/end matching broker-time ranges
+    const now = new Date();
+    let start: Date, end: Date;
+    if (period === "1D") { start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999); }
+    else if (period === "1W") { const day = now.getDay(); const diffToMonday = (day + 6) % 7; const monday = new Date(now); monday.setDate(now.getDate() - diffToMonday); monday.setHours(0,0,0,0); start = monday; const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999); end = sunday; }
+    else if (period === "1M") { start = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999); }
+    else if (period === "1Y") { start = new Date(now.getFullYear(), 0, 1, 0,0,0,0); end = new Date(now.getFullYear(), 11, 31, 23,59,59,999); }
+    else { start = new Date(0); end = new Date(); }
+
+    // Sum profit per account over the period using snapshots
+    let totalProfit = 0;
+    for (const acct of accounts) {
+      const profit = await storage.getAccountProfitInRange(acct.id, start, end);
+      totalProfit += profit;
+    }
+
+    const totalStartingBalance = totalBalance - totalProfit;
+    const totalProfitPercent = totalStartingBalance > 0 ? (totalProfit / totalStartingBalance) * 100 : 0;
+
+    res.json({ totalBalance, totalEquity: accounts.reduce((s,a) => s + a.equity, 0), totalProfit, totalProfitPercent });
   });
 
   app.get(api.portfolio.history.path, requireAuth, async (req, res) => {
-    const history = await storage.getPortfolioHistory();
-    // Transform for frontend if needed, but storage returns format matching schema mostly
-    res.json(history.map(h => ({
-      timestamp: h.timestamp.toISOString(),
-      equity: h.equity,
-      balance: h.balance
-    })));
+    const period = (req.query.period as string | undefined) ?? "ALL";
+
+    // compute broker-time start/end
+    const now = new Date();
+    let start: Date, end: Date;
+    if (period === "1D") { start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999); }
+    else if (period === "1W") { const day = now.getDay(); const diffToMonday = (day + 6) % 7; const monday = new Date(now); monday.setDate(now.getDate() - diffToMonday); monday.setHours(0,0,0,0); start = monday; const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999); end = sunday; }
+    else if (period === "1M") { start = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999); }
+    else if (period === "1Y") { start = new Date(now.getFullYear(), 0, 1, 0,0,0,0); end = new Date(now.getFullYear(), 11, 31, 23,59,59,999); }
+    else { start = new Date(0); end = new Date(); }
+
+    const history = await storage.getPortfolioHistoryInRange(start, end, period);
+
+    const results: any[] = [];
+    // synthetic start aligned to exact 'start' broker-time
+    if (history.length > 0) {
+      results.push({ timestamp: new Date(start), equity: history[0].equity, balance: history[0].balance });
+      for (const h of history) results.push(h);
+      const nowDate = new Date();
+      const periodEnd = end > nowDate ? nowDate : end;
+      const last = history[history.length - 1];
+      results.push({ timestamp: new Date(periodEnd), equity: last.equity, balance: last.balance });
+    } else {
+      // no buckets: add a single point at start and at periodEnd with zero values
+      results.push({ timestamp: new Date(start), equity: 0, balance: 0 });
+      results.push({ timestamp: new Date(end > new Date() ? new Date() : end), equity: 0, balance: 0 });
+    }
+
+    res.json(results.map(h => ({ timestamp: h.timestamp.toISOString(), equity: h.equity, balance: h.balance })));
   });
 
   // --- Webhook Route (No Auth Required - Protected by Token) ---

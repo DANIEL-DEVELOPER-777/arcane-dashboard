@@ -4,6 +4,7 @@ import { EquityChart } from "@/components/EquityChart";
 import { AccountCard } from "@/components/AccountCard";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { usePortfolioSummary, usePortfolioHistory, useAccounts } from "@/hooks/use-accounts";
+import { formatCurrency, formatPercent } from "@/lib/format";
 import { Link, Redirect } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowUpRight, TrendingUp, TrendingDown } from "lucide-react";
@@ -12,9 +13,9 @@ import { clsx } from "clsx";
 
 export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
-  const { data: summary, isLoading: summaryLoading } = usePortfolioSummary();
-  const { data: accounts, isLoading: accountsLoading } = useAccounts();
   const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
+  const { data: summary, isLoading: summaryLoading } = usePortfolioSummary(period);
+  const { data: accounts, isLoading: accountsLoading } = useAccounts();
   const { data: history, isLoading: historyLoading } = usePortfolioHistory(period);
 
   if (authLoading) return <LoadingScreen />;
@@ -22,8 +23,7 @@ export default function Dashboard() {
 
   const isLoading = summaryLoading || accountsLoading;
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+
 
   const container = {
     hidden: { opacity: 0 },
@@ -70,7 +70,7 @@ export default function Dashboard() {
               {(summary?.totalProfit || 0) >= 0 ? <TrendingUp className="w-8 h-8 md:w-10 md:h-10" /> : <TrendingDown className="w-8 h-8 md:w-10 md:h-10" />}
               <span>{formatCurrency(summary?.totalProfit || 0)}</span>
               <span className="text-lg bg-white/[0.03] px-3 py-1 rounded-lg ml-1">
-                {summary?.totalProfitPercent !== undefined ? (summary.totalProfitPercent >= 0 ? "+" : "-") : ""}{Math.abs(summary?.totalProfitPercent || 0).toFixed(2)}%
+                {formatPercent(summary?.totalProfitPercent)}
               </span>
             </div>
           </div>

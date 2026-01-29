@@ -22,7 +22,12 @@ export interface IStorage {
   // History
   addEquitySnapshot(snapshot: typeof equitySnapshots.$inferInsert): Promise<EquitySnapshot>;
   getAccountHistory(accountId: number, limit?: number): Promise<EquitySnapshot[]>;
+  getAccountSnapshotBeforeOrAt(accountId: number, at: Date): Promise<EquitySnapshot | null>;
+  getAccountSnapshotAfterOrAt(accountId: number, at: Date): Promise<EquitySnapshot | null>;
+  getAccountHistoryInRange(accountId: number, start: Date, end: Date): Promise<EquitySnapshot[]>;
+  getAccountProfitInRange(accountId: number, start: Date, end: Date): Promise<number>;
   getPortfolioHistory(limit?: number): Promise<{ timestamp: Date, equity: number, balance: number }[]>;
+  getPortfolioHistoryInRange(start: Date, end: Date, period?: string): Promise<{ timestamp: Date, equity: number, balance: number }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -111,29 +116,43 @@ export class DatabaseStorage implements IStorage {
       .limit(limit);
   }
 
-  async getPortfolioHistory(limit = 100): Promise<{ timestamp: Date, equity: number, balance: number }[]> {
-    // This is a simplified aggregation. For a real app, you'd want to bucket by time.
-    // For now, we'll just sum everything (which might be heavy) or just return latest snapshots.
-    // A better approach for MVP: Group by hour/day.
-    
-    // For MVP, let's just fetch all snapshots and aggregate in memory or use a simple query
-    // SQL aggregation by hour
+  async getAccountSnapshotBeforeOrAt(accountId: number, at: Date): Promise<EquitySnapshot | null> {
     const result = await db.execute(sql`
-      SELECT 
-        date_trunc('hour', timestamp) as ts,
-        SUM(equity) as equity,
-        SUM(balance) as balance
-      FROM equity_snapshots
-      GROUP BY ts
-      ORDER BY ts DESC
-      LIMIT ${limit}
+      SELECT * FROM equity_snapshots WHERE account_id = ${accountId} AND timestamp <= ${at} ORDER BY timestamp DESC LIMIT 1
     `);
-    
-    return result.rows.map((row: any) => ({
-      timestamp: new Date(row.ts),
-      equity: Number(row.equity),
-      balance: Number(row.balance),
-    }));
+    return result.rows[0] ?? null;
+  }
+
+  async getAccountSnapshotAfterOrAt(accountId: number, at: Date): Promise<EquitySnapshot | null> {
+    const result = await db.execute(sql`
+      SELECT * FROM equity_snapshots WHERE account_id = ${accountId} AND timestamp >= ${at} ORDER BY timestamp ASC LIMIT 1
+    `);
+    return result.rows[0] ?? null;
+  }
+
+  async getAccountHistoryInRange(accountId: number, start: Date, end: Date): Promise<EquitySnapshot[]> {
+    const result = await db.execute(sql`
+      SELECT * FROM equity_snapshots WHERE account_id = ${accountId} AND timestamp BETWEEN ${start} AND ${end} ORDER BY timestamp ASC
+    `);
+    return result.rows.map((r: any) => ({ ...r, timestamp: new Date(r.timestamp) }));
+  }
+
+  async getAccountProfitInRange(accountId: number, start: Date, end: Date): Promise<number> {
+    const startSnap = await this.getAccountSnapshotBeforeOrAt(accountId, start) ?? await this.getAccountSnapshotAfterOrAt(accountId, start);
+    const endSnap = await this.getAccountSnapshotBeforeOrAt(accountId, end);
+    if (!startSnap || !endSnap) return 0;
+    return Number(endSnap.balance) - Number(startSnap.balance);
+  }
+
+  async getPortfolioHistoryInRange(start: Date, end: Date, period: string = "ALL"): Promise<{ timestamp: Date, equity: number, balance: number }[]> {
+    // choose bucket unit
+    const unit = period === "1D" ? 'hour' : period === '1W' || period === '1M' ? 'day' : period === '1Y' ? 'month' : 'month';
+    const result = await db.execute(sql`
+      SELECT date_trunc(${unit}, timestamp) as ts, SUM(equity) as equity, SUM(balance) as balance
+      FROM equity_snapshots WHERE timestamp BETWEEN ${start} AND ${end}
+      GROUP BY ts ORDER BY ts ASC
+    `);
+    return result.rows.map((row: any) => ({ timestamp: new Date(row.ts), equity: Number(row.equity), balance: Number(row.balance) }));
   }
 }
 

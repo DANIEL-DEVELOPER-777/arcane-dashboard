@@ -119,11 +119,12 @@ export function useDeleteAccount() {
   });
 }
 
-export function usePortfolioSummary() {
+export function usePortfolioSummary(period: "1D" | "1W" | "1M" | "1Y" | "ALL" = "ALL") {
   return useQuery({
-    queryKey: [api.portfolio.summary.path],
+    queryKey: [api.portfolio.summary.path, period],
     queryFn: async () => {
-      const res = await fetch(api.portfolio.summary.path, { credentials: "include" });
+      const url = `${api.portfolio.summary.path}?period=${period}`;
+      const res = await fetch(url, { credentials: "include" });
       if (res.status === 401) throw new Error("Unauthorized");
       if (!res.ok) throw new Error("Failed to fetch summary");
       return api.portfolio.summary.responses[200].parse(await res.json());

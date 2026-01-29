@@ -63,7 +63,6 @@ export default function Accounts() {
               <div className="col-span-full py-20 text-center glass-panel rounded-3xl border-dashed border-white/20">
                 <h3 className="text-xl text-white font-medium mb-2">No accounts found</h3>
                 <p className="text-zinc-500 mb-6">Add your first MetaTrader 5 account to get started.</p>
-                <AddAccountDialog />
               </div>
             )}
           </div>
