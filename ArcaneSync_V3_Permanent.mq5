@@ -1,13 +1,19 @@
 //+------------------------------------------------------------------+
-//| Arcane_RealTime_Sync.mq5                                         |
+//|                                       Arcane_RealTime_Sync.mq5   |
 //| EA: Attaches to chart, waits for trades to close, sends them     |
 //+------------------------------------------------------------------+
-#property version   "1.00"
+#property version   "1.10"
+#property strict
 
-input string ServerURL = "http://18.134.126.63:5000"; 
-input string Token = "0f73c586-13cf-4252-be59-5523a273e628"; 
+// Simply paste the full URL from the dashboard here
+input string WebhookURL = "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE"; 
 
 int OnInit() {
+   if(WebhookURL == "" || WebhookURL == "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE") {
+      Alert("Error: Please paste your specific Webhook URL from the Arcane Dashboard.");
+      return(INIT_PARAMETERS_INCORRECT);
+   }
+   
    Print("=== Arcane Real-Time Sync Active ===");
    return(INIT_SUCCEEDED);
 }
@@ -39,35 +45,36 @@ void SendTrade(ulong ticket) {
    double comm = HistoryDealGetDouble(ticket, DEAL_COMMISSION);
    double total = profit + swap + comm;
 
-   // JSON Payload for single trade
+   // 1. Send the Trade Deal
    string json = StringFormat("{\"t\":%lld,\"p\":%.2f}", time, total);
-   
-   string url = ServerURL + "/api/webhook/mt5/" + Token;
-   
+   SendData(json);
+   PrintFormat("Synced Trade Ticket #%d", ticket);
+
+   // 2. Send the Account Status Snapshot
+   double balance = AccountInfoDouble(ACCOUNT_BALANCE);
+   double equity = AccountInfoDouble(ACCOUNT_EQUITY);
+   double dailyProfit = equity - balance; // approximation
+   string statusJson = StringFormat("{\"balance\":%.2f,\"equity\":%.2f,\"profit\":%.2f,\"dailyProfit\":%.2f}", 
+                                     balance, equity, equity - balance, dailyProfit);
+   SendData(statusJson);
+   Print("Sent status snapshot to server.");
+}
+
+// Helper function to handle WebRequests
+void SendData(string json) {
    char postData[];
    StringToCharArray(json, postData, 0, WHOLE_ARRAY, CP_UTF8);
    
-   // --- FIX FOR ERROR 400 ---
+   // Remove null terminator to prevent JSON parse errors on server
    if(ArraySize(postData) > 0) ArrayResize(postData, ArraySize(postData) - 1);
-   // -------------------------
 
    string headers = "Content-Type: application/json\r\n";
    char result[];
    string responseHeaders;
    
-   WebRequest("POST", url, headers, 3000, postData, result, responseHeaders);
-   PrintFormat("Synced Trade Ticket #%d", ticket);
-
-   // SEND STATUS SNAPSHOT (balance/equity) so server records latest account balance
-   double balance = AccountInfoDouble(ACCOUNT_BALANCE);
-   double equity = AccountInfoDouble(ACCOUNT_EQUITY);
-   double dailyProfit = equity - balance; // approximation
-   string statusJson = StringFormat("{\"balance\":%.2f,\"equity\":%.2f,\"profit\":%.2f,\"dailyProfit\":%.2f}", balance, equity, equity - balance, dailyProfit);
-
-   char statusData[];
-   StringToCharArray(statusJson, statusData, 0, WHOLE_ARRAY, CP_UTF8);
-   if(ArraySize(statusData) > 0) ArrayResize(statusData, ArraySize(statusData) - 1);
-
-   WebRequest("POST", url, headers, 3000, statusData, result, responseHeaders);
-   Print("Sent status snapshot to server.");
+   int res = WebRequest("POST", WebhookURL, headers, 3000, postData, result, responseHeaders);
+   
+   if(res == -1) {
+      Print("Error in WebRequest. Check 'Tools -> Options -> Expert Advisors -> Allow WebRequest for listed URL'");
+   }
 }
