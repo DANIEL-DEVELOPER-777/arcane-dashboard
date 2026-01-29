@@ -86,7 +86,7 @@ git commit -m "Initial commit"
 git branch -M main
 git remote add origin https://github.com/YOUR-USERNAME/arcane-dashboard.git
 git push -u origin main
-```
+``` 
 
 **On Lightsail terminal:**
 ```bash

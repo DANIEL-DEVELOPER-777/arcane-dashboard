@@ -23,6 +23,13 @@ export const equitySnapshots = pgTable("equity_snapshots", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 
+export const trades = pgTable("trades", {
+  id: serial("id").primaryKey(),
+  accountId: integer("account_id").references(() => accounts.id).notNull(),
+  profit: doublePrecision("profit").notNull(),
+  timestamp: timestamp("timestamp").notNull(),
+});
+
 // Schema for inserting a new account (user provides name only)
 export const insertAccountSchema = createInsertSchema(accounts).pick({
   name: true,

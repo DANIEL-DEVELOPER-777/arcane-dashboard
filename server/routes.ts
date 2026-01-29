@@ -241,15 +241,49 @@ export async function registerRoutes(
   // --- Webhook Route (No Auth Required - Protected by Token) ---
   app.post(api.webhook.mt5.path, async (req, res) => {
     const { token } = req.params;
-    const { balance, equity, profit, dailyProfit } = req.body;
-
     const account = await storage.getAccountByToken(token);
     if (!account) {
       return res.status(404).json({ message: "Invalid token" });
     }
 
-    await storage.updateAccountStats(account.id, balance, equity, profit, dailyProfit);
-    res.json({ status: "ok" });
+    try {
+      const body = req.body;
+
+      // If an array is posted, treat as MT5 history: [{ t: <unix seconds>, p: <profit> }, ...]
+      if (Array.isArray(body)) {
+        if (!body.every((item: any) => typeof item.t === "number" && typeof item.p === "number")) {
+          return res.status(400).json({ message: "Invalid history payload" });
+        }
+
+        const tradesToInsert = (body as any[]).map((it: any) => ({
+          accountId: account.id,
+          profit: Number(it.p),
+          timestamp: new Date(Number(it.t) * 1000),
+        }));
+
+        await storage.addTrades(tradesToInsert);
+
+        // Recompute totals from trades and update account stats
+        const tradeTotal = await storage.getTotalProfitFromTrades(account.id);
+
+        // Update account profit to match imported history and recalc percent
+        await storage.updateAccountStats(account.id, account.balance, account.equity, tradeTotal);
+
+        return res.json({ status: "ok", inserted: tradesToInsert.length });
+      }
+
+      // Otherwise treat as single status update (existing behavior)
+      if (body && typeof body === "object") {
+        const { balance, equity, profit, dailyProfit } = body;
+        await storage.updateAccountStats(account.id, balance, equity, profit, dailyProfit);
+        return res.json({ status: "ok" });
+      }
+
+      return res.status(400).json({ message: "Unsupported payload" });
+    } catch (err) {
+      console.error("Webhook processing error:", err);
+      return res.status(500).json({ message: "Failed to process webhook" });
+    }
   });
 
   // Seed Data

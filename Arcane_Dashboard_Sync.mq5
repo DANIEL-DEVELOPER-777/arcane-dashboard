@@ -8,8 +8,8 @@
 #property script_show_inputs
 
 // USER SETTINGS - Change these
-input string ServerURL = "https://YOUR-LIGHTSAIL-IP-OR-DOMAIN";  // Your dashboard URL
-input string Token = "default-token";                             // Will be set by server admin
+input string ServerURL = "http://18.134.126.63:5000";  // Your dashboard URL
+input string Token = "0f73c586-13cf-4252-be59-5523a273e628";                             // Will be set by server admin
 
 // INTERNAL SETTINGS
 input int RequestTimeoutMs = 10000;  // How long to wait for response

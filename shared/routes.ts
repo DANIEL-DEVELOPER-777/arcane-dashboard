@@ -139,12 +139,15 @@ export const api = {
     mt5: {
       method: "POST" as const,
       path: "/api/webhook/mt5/:token",
-      input: z.object({
-        balance: z.number(),
-        equity: z.number(),
-        profit: z.number(),
-        dailyProfit: z.number().optional(),
-      }),
+      input: z.union([
+        z.object({
+          balance: z.number(),
+          equity: z.number(),
+          profit: z.number(),
+          dailyProfit: z.number().optional(),
+        }),
+        z.array(z.object({ t: z.number(), p: z.number() }))
+      ]).optional(),
       responses: {
         200: z.object({ status: z.string() }),
         404: errorSchemas.notFound,
