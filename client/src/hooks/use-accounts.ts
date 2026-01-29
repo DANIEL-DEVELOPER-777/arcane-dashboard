@@ -45,6 +45,21 @@ export function useAccountHistory(id: number, period: "1D" | "1W" | "1M" | "1Y" 
   });
 }
 
+export function useAccountProfit(id: number, period: "1D" | "1W" | "1M" | "1Y" | "ALL" = "ALL") {
+  return useQuery({
+    queryKey: [api.accounts.get.path, id, 'profit', period],
+    queryFn: async () => {
+      const url = buildUrl(api.accounts.get.path, { id }) + `/profit?period=${period}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 401) throw new Error("Unauthorized");
+      if (!res.ok) throw new Error("Failed to fetch profit");
+      return (await res.json()).profit as number;
+    },
+    enabled: !!id,
+    refetchInterval: 5000,
+  });
+}
+
 export function useCreateAccount() {
   const queryClient = useQueryClient();
   return useMutation({

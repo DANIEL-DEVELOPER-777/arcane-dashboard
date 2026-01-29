@@ -193,19 +193,14 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  // First try to compute profit from trades in the range. If no trades exist, fall back to snapshot diff.
+  // Compute profit from trades in the range (do NOT use snapshot diffs for profit calculations)
   async getAccountProfitInRange(accountId: number, start: Date, end: Date): Promise<number> {
     const tradesRes = await db.execute(sql`
       SELECT COALESCE(SUM(profit), 0) as total FROM trades WHERE account_id = ${accountId} AND timestamp BETWEEN ${start} AND ${end}
     `);
     const tradedTotal = Number(tradesRes.rows[0]?.total ?? 0);
-    if (tradedTotal !== 0) return tradedTotal;
-
-    // Fallback to snapshots if no trades
-    const startSnap = await this.getAccountSnapshotBeforeOrAt(accountId, start) ?? await this.getAccountSnapshotAfterOrAt(accountId, start);
-    const endSnap = await this.getAccountSnapshotBeforeOrAt(accountId, end);
-    if (!startSnap || !endSnap) return 0;
-    return Number(endSnap.balance) - Number(startSnap.balance);
+    // IMPORTANT: we return tradedTotal directly. Do NOT fallback to snapshot differences — profit views must be derived from trades only.
+    return tradedTotal;
   }
 
   // Insert trades (history). We guard against exact duplicates (same account, timestamp, profit).
@@ -244,6 +239,13 @@ export class DatabaseStorage implements IStorage {
       profit: Number(r.profit),
       timestamp: new Date(r.timestamp),
     }));
+  }
+
+  // Delete trades matching profit and date range. Returns number of rows deleted.
+  async deleteTradesMatching(accountId: number, profit: number, start: Date, end: Date): Promise<number> {
+    const res = await db.execute(sql`DELETE FROM trades WHERE account_id = ${accountId} AND profit = ${profit} AND timestamp BETWEEN ${start} AND ${end}`);
+    // Some drivers support rowCount; fallback to 0 when not present
+    return typeof (res.rowCount) === 'number' ? res.rowCount : 0;
   }
 
   // Aggregate trades across all accounts into time buckets. Used as a fallback when no snapshot buckets exist.

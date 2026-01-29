@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/Layout";
 import { EquityChart } from "@/components/EquityChart";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { useAccount, useAccountHistory, useUpdateAccount, useDeleteAccount } from "@/hooks/use-accounts";
+import { useAccount, useAccountHistory, useUpdateAccount, useDeleteAccount, useAccountProfit } from "@/hooks/use-accounts";
 import { useRoute, Redirect, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowLeft, Copy, Trash2, Edit2, Check, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
@@ -76,11 +76,11 @@ export default function AccountDetail() {
     }
   };
 
-  // Derive profit from MT5 history, not local account fields
+  // Derive profit from trades-only endpoint
   const hist = history || [];
   const startBalance = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
-  const endBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
-  const derivedProfit = endBalance - startBalance;
+  const tradeProfitQuery = useAccountProfit(id, period);
+  const derivedProfit = tradeProfitQuery.data ?? 0;
   // Use Net Profit divided by the initial deposit (first record in history) as the percentage basis
   const derivedProfitPercent = startBalance > 0 ? (derivedProfit / startBalance) * 100 : 0;
   const isProfit = derivedProfit >= 0;

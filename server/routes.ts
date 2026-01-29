@@ -119,6 +119,36 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: delete trades matching profit and date range (e.g., remove erroneous snapshot-as-trade entries)
+  app.post(`${api.accounts.get.path}/trades/cleanup`, requireAuth, async (req, res) => {
+    try {
+      const accountId = Number(req.params.id);
+      const { profit, date, start, end } = req.body as any;
+      if (typeof profit !== 'number') return res.status(400).json({ message: 'profit (number) is required' });
+
+      let startDate: Date, endDate: Date;
+      if (start && end) {
+        startDate = new Date(start);
+        endDate = new Date(end);
+      } else if (date) {
+        const d = new Date(date);
+        startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0,0,0,0);
+        endDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23,59,59,999);
+      } else {
+        // default to today
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999);
+      }
+
+      const deleted = await storage.deleteTradesMatching(accountId, profit, startDate, endDate);
+      res.json({ deleted });
+    } catch (err) {
+      console.error('Cleanup error:', err);
+      res.status(500).json({ message: 'Failed to cleanup trades' });
+    }
+  });
+
   app.get(api.accounts.history.path, requireAuth, async (req, res) => {
     const accountId = Number(req.params.id);
     const period = (req.query.period as string | undefined) ?? "ALL";
@@ -212,6 +242,23 @@ export async function registerRoutes(
 
     // normalize timestamps to ISO
     res.json(results.map(r => ({ ...r, timestamp: r.timestamp.toISOString() })));
+  });
+
+  // --- Account profit endpoint (trades-only) ---
+  app.get(`${api.accounts.get.path}/profit`, requireAuth, async (req, res) => {
+    const accountId = Number(req.params.id);
+    const period = (req.query.period as string | undefined) ?? "ALL";
+
+    const now = new Date();
+    let start: Date, end: Date;
+    if (period === "1D") { start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999); }
+    else if (period === "1W") { const day = now.getDay(); const diffToMonday = (day + 6) % 7; const monday = new Date(now); monday.setDate(now.getDate() - diffToMonday); monday.setHours(0,0,0,0); start = monday; const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999); end = sunday; }
+    else if (period === "1M") { start = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999); }
+    else if (period === "1Y") { start = new Date(now.getFullYear(), 0, 1, 0,0,0,0); end = new Date(now.getFullYear(), 11, 31, 23,59,59,999); }
+    else { start = new Date(0); end = new Date(); }
+
+    const profit = await storage.getAccountProfitInRange(accountId, start, end);
+    res.json({ profit });
   });
 
   // --- Portfolio Routes ---
