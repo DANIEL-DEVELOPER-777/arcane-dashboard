@@ -130,6 +130,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
 
 
   // Generate ticks based on periodStart/periodEnd, always include zero-points
+
   const generateTicks = (min: number, max: number, period: string) => {
     const ticks: number[] = [];
     if (period === "1D") {
@@ -142,24 +143,30 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       ticks.push(monday.getTime());
       for (let t = min; t <= max; t += 86400000) ticks.push(t);
     } else if (period === "1M") {
-      // Always include Week 1
-      ticks.push(startOfMonth(new Date(min)).getTime());
-      for (let t = min; t <= max; t = addDays(new Date(t), 7).getTime()) ticks.push(t);
+      // Always include Week 1 (first day of month)
+      const monthStart = startOfMonth(new Date(min)).getTime();
+      ticks.push(monthStart);
+      // Add each week (7 days), but ensure Week 1 is labeled
+      for (let t = monthStart; t <= max; t = addDays(new Date(t), 7).getTime()) {
+        ticks.push(t);
+      }
     } else if (period === "1Y") {
       // Always include January
-      ticks.push(new Date(new Date(min).getFullYear(), 0, 1).getTime());
+      const jan = new Date(new Date(min).getFullYear(), 0, 1).getTime();
+      ticks.push(jan);
       for (let m = 0; ; m++) {
-        const dt = addMonths(new Date(min), m).getTime();
+        const dt = addMonths(new Date(jan), m).getTime();
         if (dt > max) break;
-        ticks.push(new Date(dt).getTime());
+        ticks.push(dt);
       }
     } else {
       // ALL: Always include first month of account creation
-      ticks.push(new Date(min).getTime());
+      const firstMonth = new Date(new Date(min).getFullYear(), new Date(min).getMonth(), 1).getTime();
+      ticks.push(firstMonth);
       for (let m = 0; ; m++) {
-        const dt = addMonths(new Date(min), m).getTime();
+        const dt = addMonths(new Date(firstMonth), m).getTime();
         if (dt > max) break;
-        ticks.push(new Date(dt).getTime());
+        ticks.push(dt);
       }
     }
     // Remove duplicates and sort

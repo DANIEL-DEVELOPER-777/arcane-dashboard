@@ -288,6 +288,7 @@ export async function registerRoutes(
       totalProfit += profit;
     }
 
+    // ROI: (Profit / (Balance - Profit)) * 100
     const totalStartingBalance = totalBalance - totalProfit;
     const totalProfitPercent = totalStartingBalance > 0 ? (totalProfit / totalStartingBalance) * 100 : 0;
 
