@@ -6,8 +6,10 @@ import {
   type Account,
   type InsertAccount,
   type EquitySnapshot,
-  type Trade,
 } from "@shared/schema";
+
+// Local type alias for trade row
+export type Trade = typeof trades.$inferSelect;
 import { eq, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
@@ -128,24 +130,54 @@ export class DatabaseStorage implements IStorage {
     const result = await db.execute(sql`
       SELECT * FROM equity_snapshots WHERE account_id = ${accountId} AND timestamp <= ${at} ORDER BY timestamp DESC LIMIT 1
     `);
-    return result.rows[0] ?? null;
+    const row = result.rows[0] as any;
+    if (!row) return null;
+    return {
+      id: Number(row.id),
+      accountId: Number(row.account_id),
+      balance: Number(row.balance),
+      equity: Number(row.equity),
+      timestamp: new Date(row.timestamp),
+    };
   }
 
   async getAccountSnapshotAfterOrAt(accountId: number, at: Date): Promise<EquitySnapshot | null> {
     const result = await db.execute(sql`
       SELECT * FROM equity_snapshots WHERE account_id = ${accountId} AND timestamp >= ${at} ORDER BY timestamp ASC LIMIT 1
     `);
-    return result.rows[0] ?? null;
+    const row = result.rows[0] as any;
+    if (!row) return null;
+    return {
+      id: Number(row.id),
+      accountId: Number(row.account_id),
+      balance: Number(row.balance),
+      equity: Number(row.equity),
+      timestamp: new Date(row.timestamp),
+    };
   }
 
   async getAccountHistoryInRange(accountId: number, start: Date, end: Date): Promise<EquitySnapshot[]> {
     const result = await db.execute(sql`
       SELECT * FROM equity_snapshots WHERE account_id = ${accountId} AND timestamp BETWEEN ${start} AND ${end} ORDER BY timestamp ASC
     `);
-    return result.rows.map((r: any) => ({ ...r, timestamp: new Date(r.timestamp) }));
+    return result.rows.map((r: any) => ({
+      id: Number(r.id),
+      accountId: Number(r.account_id),
+      balance: Number(r.balance),
+      equity: Number(r.equity),
+      timestamp: new Date(r.timestamp),
+    }));
   }
 
+  // First try to compute profit from trades in the range. If no trades exist, fall back to snapshot diff.
   async getAccountProfitInRange(accountId: number, start: Date, end: Date): Promise<number> {
+    const tradesRes = await db.execute(sql`
+      SELECT COALESCE(SUM(profit), 0) as total FROM trades WHERE account_id = ${accountId} AND timestamp BETWEEN ${start} AND ${end}
+    `);
+    const tradedTotal = Number(tradesRes.rows[0]?.total ?? 0);
+    if (tradedTotal !== 0) return tradedTotal;
+
+    // Fallback to snapshots if no trades
     const startSnap = await this.getAccountSnapshotBeforeOrAt(accountId, start) ?? await this.getAccountSnapshotAfterOrAt(accountId, start);
     const endSnap = await this.getAccountSnapshotBeforeOrAt(accountId, end);
     if (!startSnap || !endSnap) return 0;
@@ -170,9 +202,42 @@ export class DatabaseStorage implements IStorage {
     return Number(result.rows[0]?.total ?? 0);
   }
 
-  async getTradesByAccount(accountId: number): Promise<{ id: number; accountId: number; profit: number; timestamp: Date }[]> {
+  async getTradesByAccount(accountId: number): Promise<Trade[]> {
     const result = await db.execute(sql`SELECT * FROM trades WHERE account_id = ${accountId} ORDER BY timestamp ASC`);
-    return result.rows.map((r: any) => ({ ...r, timestamp: new Date(r.timestamp) }));
+    return result.rows.map((r: any) => ({
+      id: Number(r.id),
+      accountId: Number(r.account_id),
+      profit: Number(r.profit),
+      timestamp: new Date(r.timestamp),
+    }));
+  }
+
+  async getTradesInRange(accountId: number, start: Date, end: Date): Promise<Trade[]> {
+    const result = await db.execute(sql`SELECT * FROM trades WHERE account_id = ${accountId} AND timestamp BETWEEN ${start} AND ${end} ORDER BY timestamp ASC`);
+    return result.rows.map((r: any) => ({
+      id: Number(r.id),
+      accountId: Number(r.account_id),
+      profit: Number(r.profit),
+      timestamp: new Date(r.timestamp),
+    }));
+  }
+
+  // Aggregate trades across all accounts into time buckets. Used as a fallback when no snapshot buckets exist.
+  async getTradesAggregatedInRange(start: Date, end: Date, unit: 'hour' | 'day' | 'month') {
+    const result = await db.execute(sql`
+      SELECT date_trunc(${unit}, timestamp) as ts, COALESCE(SUM(profit),0) as total
+      FROM trades WHERE timestamp BETWEEN ${start} AND ${end}
+      GROUP BY ts ORDER BY ts ASC
+    `);
+    return result.rows.map((r: any) => ({ timestamp: new Date(r.ts), profit: Number(r.total) }));
+  }
+
+  async getPortfolioHistory(limit = 100): Promise<{ timestamp: Date, equity: number, balance: number }[]> {
+    const result = await db.execute(sql`
+      SELECT timestamp, equity, balance FROM equity_snapshots
+      ORDER BY timestamp DESC LIMIT ${limit}
+    `);
+    return result.rows.map((r: any) => ({ timestamp: new Date(r.timestamp), equity: Number(r.equity), balance: Number(r.balance) }));
   }
 
   async getPortfolioHistoryInRange(start: Date, end: Date, period: string = "ALL"): Promise<{ timestamp: Date, equity: number, balance: number }[]> {
@@ -183,7 +248,22 @@ export class DatabaseStorage implements IStorage {
       FROM equity_snapshots WHERE timestamp BETWEEN ${start} AND ${end}
       GROUP BY ts ORDER BY ts ASC
     `);
-    return result.rows.map((row: any) => ({ timestamp: new Date(row.ts), equity: Number(row.equity), balance: Number(row.balance) }));
+    const rows = result.rows.map((row: any) => ({ timestamp: new Date(row.ts), equity: Number(row.equity), balance: Number(row.balance) }));
+
+    // If there are no snapshot buckets, fall back to aggregated trades
+    if (rows.length === 0) {
+      const tradeBuckets = await this.getTradesAggregatedInRange(start, end, unit as any);
+      // Convert trade buckets into balance/equity points by applying cumulative profit
+      let cumulative = 0;
+      const out: { timestamp: Date; equity: number; balance: number }[] = [];
+      for (const b of tradeBuckets) {
+        cumulative += b.profit;
+        out.push({ timestamp: b.timestamp, equity: cumulative, balance: cumulative });
+      }
+      return out;
+    }
+
+    return rows;
   }
 }
 

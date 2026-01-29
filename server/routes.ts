@@ -144,6 +144,26 @@ export async function registerRoutes(
     // Build results and ensure synthetic start/end points aligned to requested broker-time
     const results: any[] = [];
 
+    if (snapshots.length === 0) {
+      // No snapshots — fall back to trade history (if any) and build synthetic progression
+      const trades = await storage.getTradesInRange(accountId, start, end);
+
+      // Start synthetic point at the exact start broker-time with zero cumulative (or before-trade cumulative)
+      let cumulative = 0;
+      results.push({ id: `s-${accountId}`, accountId, balance: cumulative, equity: cumulative, timestamp: new Date(start) });
+
+      for (const t of trades) {
+        cumulative += Number(t.profit);
+        results.push({ id: `t-${t.id}`, accountId, balance: cumulative, equity: cumulative, timestamp: t.timestamp });
+      }
+
+      const now = new Date();
+      const periodEnd = end > now ? now : end;
+      results.push({ id: `e-${accountId}`, accountId, balance: cumulative, equity: cumulative, timestamp: new Date(periodEnd) });
+
+      return res.json(results.map(r => ({ ...r, timestamp: r.timestamp.toISOString() })));
+    }
+
     // Start point: prefer snapshot at-or-before start, otherwise first snapshot in range, otherwise synthetic using account balance
     const startSnap = await storage.getAccountSnapshotBeforeOrAt(accountId, start);
     if (startSnap) {

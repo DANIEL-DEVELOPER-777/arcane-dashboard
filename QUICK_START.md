@@ -27,7 +27,7 @@ npm run db:push
 ```bash
 npm run build
 ```
-
+DATABASE_URL="postgresql://neondb_owner:npg_FG7PYDR1cATg@ep-spring-grass-abyv4ixv-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require" pm2 start dist/index.cjs --name "arcane-dashboard"
 ### 6️⃣ Test Locally (Optional)
 ```bash
 npm start
@@ -110,6 +110,7 @@ npm run build
 pm2 start npm --name "arcane-dashboard" -- start
 ```
 
+
 Check status:
 ```bash
 pm2 list
@@ -120,6 +121,8 @@ pm2 list
 pm2 startup
 pm2 save
 ```
+
+
 
 Copy & run the command it shows.
 

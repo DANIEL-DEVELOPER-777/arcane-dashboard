@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
 import { formatCurrency, formatPercent } from "@/lib/format";
+import { useAccountHistory } from "@/hooks/use-accounts";
 
 interface AccountCardProps {
   account: Account;
@@ -10,8 +11,16 @@ interface AccountCardProps {
 }
 
 export function AccountCard({ account, detailed = false }: AccountCardProps) {
-  const dailyProfit = account.dailyProfit ?? 0;
-  const dailyProfitPercent = account.dailyProfitPercent ?? 0;
+  // Fetch today's history for this account and derive profit from it
+  const { data: todayHistory, isLoading } = useAccountHistory(account.id, "1D");
+
+  const hist = todayHistory || [];
+  const startBalance = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
+  const endBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
+  const derivedDailyProfit = endBalance - startBalance;
+  const derivedDailyPercent = (endBalance - derivedDailyProfit) > 0 ? (derivedDailyProfit / (endBalance - derivedDailyProfit)) * 100 : 0;
+  const dailyProfit = isLoading ? (account.dailyProfit ?? 0) : derivedDailyProfit;
+  const dailyProfitPercent = isLoading ? (account.dailyProfitPercent ?? 0) : derivedDailyPercent;
   const isProfit = dailyProfit >= 0;
 
   return (
