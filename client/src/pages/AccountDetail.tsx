@@ -78,11 +78,21 @@ export default function AccountDetail() {
 
   // Derive profit from trades-only endpoint
   const hist = history || [];
-  const startBalance = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
+  const initialDeposit = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
+  const currentBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
   const tradeProfitQuery = useAccountProfit(id, period);
   const derivedProfit = tradeProfitQuery.data ?? 0;
-  // Use Net Profit divided by the initial deposit (first record in history) as the percentage basis
-  const derivedProfitPercent = startBalance > 0 ? (derivedProfit / startBalance) * 100 : 0;
+
+  // Percentage calculation rules:
+  // - ALL: percent = TotalProfit / (CurrentBalance - TotalProfit)
+  // - Otherwise: percent = TotalProfit / InitialDeposit
+  let derivedProfitPercent = 0;
+  if (period === "ALL") {
+    derivedProfitPercent = (currentBalance - derivedProfit) > 0 ? (derivedProfit / (currentBalance - derivedProfit)) * 100 : 0;
+  } else {
+    derivedProfitPercent = initialDeposit > 0 ? (derivedProfit / initialDeposit) * 100 : 0;
+  }
+
   const isProfit = derivedProfit >= 0;
 
   return (

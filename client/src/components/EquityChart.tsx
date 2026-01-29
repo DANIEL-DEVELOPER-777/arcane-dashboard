@@ -7,6 +7,8 @@ interface ChartDataPoint {
   timestamp: string;
   equity: number;
   balance: number;
+  // 'ts' is a numeric timestamp (ms) used for chart domaining
+  ts?: number;
 }
 
 interface EquityChartProps {
@@ -68,6 +70,9 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
+  // Prepare numeric timestamp field for better domain control (so 'ALL' can span from earliest trade)
+  const numericData = data ? data.map(d => ({ ...d, ts: new Date(d.timestamp).getTime() })) : undefined;
+
   return (
     <div className="glass-panel rounded-3xl p-4 md:p-8 relative overflow-hidden group">
       {/* Header with period toggle */}
@@ -96,7 +101,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       {/* Chart */}
       <div className="h-[200px] md:h-[300px] w-full -ml-2">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
+          <AreaChart data={numericData}>
             <defs>
               <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#fff" stopOpacity={0.2}/>
@@ -104,12 +109,14 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
               </linearGradient>
             </defs>
             <XAxis 
-              dataKey="timestamp" 
+              dataKey="ts" 
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#666', fontSize: 10 }}
-              tickFormatter={(str) => format(new Date(str), activePeriod === "1D" ? "HH:mm" : "MMM d")}
+              tickFormatter={(val) => format(new Date(Number(val)), activePeriod === "1D" ? "HH:mm" : "MMM d")}
               minTickGap={20}
+              domain={["dataMin", "dataMax"]}
+              type="number"
             />
             <YAxis 
               hide
