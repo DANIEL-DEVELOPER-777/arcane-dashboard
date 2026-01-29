@@ -158,12 +158,13 @@ export class DatabaseStorage implements IStorage {
     `);
     const row = result.rows[0] as any;
     if (!row) return null;
+    const ts = row.timestamp ? new Date(row.timestamp) : new Date();
     return {
       id: Number(row.id),
       accountId: Number(row.account_id),
       balance: Number(row.balance),
       equity: Number(row.equity),
-      timestamp: new Date(row.timestamp),
+      timestamp: ts,
     };
   }
 
@@ -173,12 +174,13 @@ export class DatabaseStorage implements IStorage {
     `);
     const row = result.rows[0] as any;
     if (!row) return null;
+    const ts = row.timestamp ? new Date(row.timestamp) : new Date();
     return {
       id: Number(row.id),
       accountId: Number(row.account_id),
       balance: Number(row.balance),
       equity: Number(row.equity),
-      timestamp: new Date(row.timestamp),
+      timestamp: ts,
     };
   }
 
@@ -228,22 +230,28 @@ export class DatabaseStorage implements IStorage {
 
   async getTradesByAccount(accountId: number): Promise<Trade[]> {
     const result = await db.execute(sql`SELECT * FROM trades WHERE account_id = ${accountId} ORDER BY timestamp ASC`);
-    return result.rows.map((r: any) => ({
-      id: Number(r.id),
-      accountId: Number(r.account_id),
-      profit: Number(r.profit),
-      timestamp: new Date(r.timestamp),
-    }));
+    return result.rows.map((r: any) => {
+      const ts = r.timestamp ? new Date(r.timestamp) : new Date();
+      return {
+        id: Number(r.id),
+        accountId: Number(r.account_id),
+        profit: Number(r.profit),
+        timestamp: ts,
+      };
+    });
   }
 
   async getTradesInRange(accountId: number, start: Date, end: Date): Promise<Trade[]> {
     const result = await db.execute(sql`SELECT * FROM trades WHERE account_id = ${accountId} AND timestamp BETWEEN ${start} AND ${end} ORDER BY timestamp ASC`);
-    return result.rows.map((r: any) => ({
-      id: Number(r.id),
-      accountId: Number(r.account_id),
-      profit: Number(r.profit),
-      timestamp: new Date(r.timestamp),
-    }));
+    return result.rows.map((r: any) => {
+      const ts = r.timestamp ? new Date(r.timestamp) : new Date();
+      return {
+        id: Number(r.id),
+        accountId: Number(r.account_id),
+        profit: Number(r.profit),
+        timestamp: ts,
+      };
+    });
   }
 
   // Delete trades matching profit and date range. Returns number of rows deleted.
@@ -297,24 +305,28 @@ export class DatabaseStorage implements IStorage {
     const res = await db.execute(sql`SELECT MIN(timestamp) as ts FROM trades WHERE account_id = ${accountId}`);
     const val = res.rows[0]?.ts;
     if (!val) return null;
-    return new Date(val).getTime();
+    const d = (typeof val === 'string' || typeof val === 'number' || val instanceof Date) ? new Date(val as any) : new Date();
+    return d.getTime();
   }
 
   async getEarliestSnapshotTimestamp(accountId: number): Promise<number | null> {
     const res = await db.execute(sql`SELECT MIN(timestamp) as ts FROM equity_snapshots WHERE account_id = ${accountId}`);
     const val = res.rows[0]?.ts;
     if (!val) return null;
-    return new Date(val).getTime();
+    const d = (typeof val === 'string' || typeof val === 'number' || val instanceof Date) ? new Date(val as any) : new Date();
+    return d.getTime();
   }
 
   async getAccountEarliestTimestamp(accountId: number): Promise<number | null> {
     const tradeTs = await this.getEarliestTradeTimestamp(accountId);
     const snapTs = await this.getEarliestSnapshotTimestamp(accountId);
     const [acct] = await db.select().from(accounts).where(eq(accounts.id, accountId));
-    // Prefer account createdAt if present, otherwise fallback to lastUpdated
-    const acctTs = acct ? (acct.createdAt ? new Date(acct.createdAt).getTime() : (acct.lastUpdated ? new Date(acct.lastUpdated).getTime() : null)) : null;
+    // Use account lastUpdated as a fallback timestamp when trades/snapshots are absent
+    const acctTs = acct && acct.lastUpdated && (typeof acct.lastUpdated === 'string' || typeof acct.lastUpdated === 'number' || acct.lastUpdated instanceof Date)
+      ? new Date(acct.lastUpdated as any).getTime()
+      : null;
     const candidates = [tradeTs, snapTs].filter((v: any) => typeof v === 'number') as number[];
-    // If no trade or snapshot timestamps, return account timestamp fallback (createdAt/lastUpdated) when available
+    // If no trade or snapshot timestamps, return account timestamp fallback (lastUpdated) when available
     if (candidates.length === 0) return acctTs;
     return Math.min(...candidates, ...(acctTs ? [acctTs] : []));
   }
