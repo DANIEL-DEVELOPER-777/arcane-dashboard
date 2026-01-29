@@ -71,7 +71,25 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
 
   // Prepare numeric timestamp field for better domain control (so 'ALL' can span from earliest trade)
-  const numericData = data ? data.map(d => ({ ...d, ts: new Date(d.timestamp).getTime() })) : undefined;
+  const parseTimestampMs = (t: any) => {
+    // If timestamp is a number, assume seconds when it's small (< 1e12), otherwise milliseconds
+    if (typeof t === 'number') return t > 1e12 ? t : t * 1000;
+    // If string of digits, treat similarly
+    if (typeof t === 'string') {
+      if (/^\d+$/.test(t)) {
+        const n = Number(t);
+        return n > 1e12 ? n : n * 1000;
+      }
+      // ISO date string
+      return new Date(t).getTime();
+    }
+    // Fallback
+    return new Date(t).getTime();
+  };
+
+  const numericData = data ? data.map(d => ({ ...d, ts: parseTimestampMs(d.timestamp) })) : undefined;
+  // Ensure points are sorted by timestamp so domain starts at the exact first trade
+  const sortedData = numericData ? [...numericData].sort((a,b) => (a.ts! - b.ts!)) : undefined;
 
   return (
     <div className="glass-panel rounded-3xl p-4 md:p-8 relative overflow-hidden group">
@@ -101,7 +119,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       {/* Chart */}
       <div className="h-[200px] md:h-[300px] w-full -ml-2">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={numericData}>
+          <AreaChart data={sortedData}>
             <defs>
               <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#fff" stopOpacity={0.2}/>
@@ -113,7 +131,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#666', fontSize: 10 }}
-              tickFormatter={(val) => format(new Date(Number(val)), activePeriod === "1D" ? "HH:mm" : "MMM d")}
+              tickFormatter={(val) => format(new Date(Number(val)), activePeriod === "1D" ? "HH:mm" : (activePeriod === "ALL" ? "MMM yyyy" : "MMM d"))}
               minTickGap={20}
               domain={["dataMin", "dataMax"]}
               type="number"
