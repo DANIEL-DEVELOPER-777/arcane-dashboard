@@ -146,7 +146,10 @@ export const api = {
           profit: z.number(),
           dailyProfit: z.number().optional(),
         }),
-        z.array(z.object({ t: z.number(), p: z.number() }))
+        z.array(z.union([
+          z.object({ t: z.number(), p: z.number() }),
+          z.object({ balance: z.number(), equity: z.number(), profit: z.number(), dailyProfit: z.number().optional() })
+        ]))
       ]).optional(),
       responses: {
         200: z.object({ status: z.string() }),

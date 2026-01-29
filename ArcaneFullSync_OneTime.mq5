@@ -72,4 +72,19 @@ void SendToServer(string json) {
    
    if(code == 200) Print("SUCCESS: History Uploaded.");
    else PrintFormat("ERROR: Server returned %d", code);
+
+   // Also send a status snapshot (balance/equity) so the server records initial deposit / latest balance
+   double balance = AccountInfoDouble(ACCOUNT_BALANCE);
+   double equity = AccountInfoDouble(ACCOUNT_EQUITY);
+   double profit = equity - balance; // approximate
+   double dailyProfit = profit; // best-effort
+   string statusJson = StringFormat("{\"balance\":%.2f,\"equity\":%.2f,\"profit\":%.2f,\"dailyProfit\":%.2f}", balance, equity, profit, dailyProfit);
+
+   char statusData[];
+   StringToCharArray(statusJson, statusData, 0, WHOLE_ARRAY, CP_UTF8);
+   if(ArraySize(statusData) > 0) ArrayResize(statusData, ArraySize(statusData) - 1);
+
+   int code2 = WebRequest("POST", url, headers, 10000, statusData, result, responseHeaders);
+   if(code2 == 200) Print("SUCCESS: Status snapshot uploaded.");
+   else PrintFormat("ERROR: Status snapshot failed %d", code2);
 }

@@ -18,7 +18,8 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
   const startBalance = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
   const endBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
   const derivedDailyProfit = endBalance - startBalance;
-  const derivedDailyPercent = (endBalance - derivedDailyProfit) > 0 ? (derivedDailyProfit / (endBalance - derivedDailyProfit)) * 100 : 0;
+  // Use Net Daily Profit divided by the day's starting balance as the percent basis
+  const derivedDailyPercent = startBalance > 0 ? (derivedDailyProfit / startBalance) * 100 : 0;
   const dailyProfit = isLoading ? (account.dailyProfit ?? 0) : derivedDailyProfit;
   const dailyProfitPercent = isLoading ? (account.dailyProfitPercent ?? 0) : derivedDailyPercent;
   const isProfit = dailyProfit >= 0;

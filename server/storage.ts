@@ -47,7 +47,9 @@ export class DatabaseStorage implements IStorage {
     const result: Account[] = [];
     for (const r of rows) {
       const tradeTotal = await this.getTotalProfitFromTrades(r.id);
-      result.push({ ...r, balance: tradeTotal, profit: tradeTotal });
+      // Current balance = latest stored snapshot (or stored account.balance) + trades since that snapshot
+      const currentBalance = await this.getCurrentBalance(r.id);
+      result.push({ ...r, balance: currentBalance, profit: tradeTotal });
     }
     return result;
   }
@@ -56,7 +58,10 @@ export class DatabaseStorage implements IStorage {
     const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
     if (!account) return undefined;
     const tradeTotal = await this.getTotalProfitFromTrades(account.id);
-    return { ...account, balance: tradeTotal, profit: tradeTotal };
+    // Current balance = latest snapshot/ stored balance + trades since last snapshot
+    const currentBalance = await this.getCurrentBalance(account.id);
+    // Do not overwrite stored balance in DB; return a computed current balance for UI purposes.
+    return { ...account, balance: currentBalance, profit: tradeTotal };
   }
 
   async getAccountByToken(token: string): Promise<Account | undefined> {
@@ -83,12 +88,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number): Promise<Account> {
-    // Recompute totals from trades: balance and profit are derived from trade history
+    // Keep balance as provided (status snapshots should update it). Use trades to compute profit totals and percentages.
     const tradeTotal = await this.getTotalProfitFromTrades(id);
-
-    // Use tradeTotal as canonical balance/profit
-    const canonicalBalance = tradeTotal;
     const canonicalProfit = tradeTotal;
+
+    // Use provided balance value unless it's null/undefined
+    const canonicalBalance = typeof balance === "number" ? balance : (await this.getAccount(id))?.balance ?? 0;
 
     // Calculate starting balance for total profit (balance before all profit was made)
     const startingBalance = canonicalBalance - canonicalProfit;
@@ -254,6 +259,27 @@ export class DatabaseStorage implements IStorage {
   async getTradeSumBefore(accountId: number, at: Date): Promise<number> {
     const res = await db.execute(sql`SELECT COALESCE(SUM(profit),0) as total FROM trades WHERE account_id = ${accountId} AND timestamp < ${at}`);
     return Number(res.rows[0]?.total ?? 0);
+  }
+
+  // Sum of trades strictly after the given timestamp (useful to compute 'new' profit since last snapshot)
+  async getTradeSumAfter(accountId: number, after: Date): Promise<number> {
+    const res = await db.execute(sql`SELECT COALESCE(SUM(profit),0) as total FROM trades WHERE account_id = ${accountId} AND timestamp > ${after}`);
+    return Number(res.rows[0]?.total ?? 0);
+  }
+
+  // Compute current balance as: baseBalance + tradesAfterBase
+  // baseBalance is taken from the latest equity snapshot if present; otherwise the stored account.balance is used.
+  async getCurrentBalance(accountId: number): Promise<number> {
+    const latestSnap = await this.getAccountSnapshotBeforeOrAt(accountId, new Date());
+    let baseBalance = 0;
+    if (latestSnap) baseBalance = Number(latestSnap.balance);
+    else {
+      const [acct] = await db.select().from(accounts).where(eq(accounts.id, accountId));
+      baseBalance = acct ? Number(acct.balance) : 0;
+    }
+
+    const tradesAfter = latestSnap ? await this.getTradeSumAfter(accountId, latestSnap.timestamp) : await this.getTotalProfitFromTrades(accountId);
+    return baseBalance + tradesAfter;
   }
 
   async getPortfolioHistory(limit = 100): Promise<{ timestamp: Date, equity: number, balance: number }[]> {

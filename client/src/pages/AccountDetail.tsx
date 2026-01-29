@@ -38,11 +38,25 @@ export default function AccountDetail() {
 
   const apiUrl = `${window.location.origin}/api/webhook/mt5/${account?.token}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(apiUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Copied!", description: "API URL copied to clipboard" });
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(apiUrl);
+      } else {
+        // Fallback for non-secure contexts
+        const ta = document.createElement('textarea');
+        ta.value = apiUrl;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({ title: "Copied!", description: "API URL copied to clipboard" });
+    } catch (err) {
+      toast({ title: "Copy failed", description: "Unable to copy URL. You can manually select and copy it." });
+    }
   };
 
   const handleUpdate = async () => {
@@ -53,9 +67,13 @@ export default function AccountDetail() {
   };
 
   const handleDelete = async () => {
-    await deleteAccount.mutateAsync(id);
-    toast({ title: "Deleted", description: "Account removed successfully" });
-    setLocation("/accounts");
+    try {
+      await deleteAccount.mutateAsync(id);
+      toast({ title: "Deleted", description: "Account removed successfully" });
+      setLocation("/accounts");
+    } catch (err: any) {
+      toast({ title: "Delete failed", description: err.message || "Failed to delete account" });
+    }
   };
 
   // Derive profit from MT5 history, not local account fields
@@ -63,7 +81,8 @@ export default function AccountDetail() {
   const startBalance = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
   const endBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
   const derivedProfit = endBalance - startBalance;
-  const derivedProfitPercent = (endBalance - derivedProfit) > 0 ? (derivedProfit / (endBalance - derivedProfit)) * 100 : 0;
+  // Use Net Profit divided by the initial deposit (first record in history) as the percentage basis
+  const derivedProfitPercent = startBalance > 0 ? (derivedProfit / startBalance) * 100 : 0;
   const isProfit = derivedProfit >= 0;
 
   return (
@@ -130,7 +149,7 @@ export default function AccountDetail() {
 
         {/* Chart */}
         <EquityChart 
-          data={history} 
+          data={history ? history.map(h => ({ ...h, timestamp: typeof h.timestamp === 'string' ? h.timestamp : new Date(h.timestamp).toISOString() })) : undefined}
           onPeriodChange={setPeriod} 
           isLoading={historyLoading} 
         />

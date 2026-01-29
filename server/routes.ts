@@ -108,8 +108,15 @@ export async function registerRoutes(
   });
 
   app.delete(api.accounts.delete.path, requireAuth, async (req, res) => {
-    await storage.deleteAccount(Number(req.params.id));
-    res.status(204).send();
+    try {
+      const id = Number(req.params.id);
+      console.log(`[api] Deleting account ${id}`);
+      await storage.deleteAccount(id);
+      return res.status(204).send();
+    } catch (err) {
+      console.error("Failed to delete account:", err);
+      return res.status(500).json({ message: "Failed to delete account" });
+    }
   });
 
   app.get(api.accounts.history.path, requireAuth, async (req, res) => {
@@ -212,11 +219,11 @@ export async function registerRoutes(
     const period = (req.query.period as string | undefined) ?? "ALL";
     const accounts = await storage.getAccounts();
 
-    // compute total balance from trades (canonical source)
+    // compute total balance from latest snapshots + trades since those snapshots (canonical current balance)
     let totalBalance = 0;
     for (const acct of accounts) {
-      const acctTotal = await storage.getTotalProfitFromTrades(acct.id);
-      totalBalance += acctTotal;
+      const current = await storage.getCurrentBalance(acct.id);
+      totalBalance += current;
     }
 
     // compute period start/end matching broker-time ranges
@@ -301,27 +308,40 @@ export async function registerRoutes(
     try {
       const body = req.body;
 
-      // If an array is posted, treat as MT5 history: [{ t: <unix seconds>, p: <profit> }, ...]
+      // If an array is posted, allow a mix of trade records and optional snapshot records
       if (Array.isArray(body)) {
-        if (!body.every((item: any) => typeof item.t === "number" && typeof item.p === "number")) {
-          return res.status(400).json({ message: "Invalid history payload" });
+        const tradesPart: any[] = [];
+        const snapshots: any[] = [];
+
+        for (const item of body) {
+          if (item && typeof item === 'object' && typeof item.t === 'number' && typeof item.p === 'number') {
+            tradesPart.push(item);
+          } else if (item && typeof item === 'object' && typeof item.balance === 'number') {
+            snapshots.push(item);
+          }
         }
 
-        const tradesToInsert = (body as any[]).map((it: any) => ({
-          accountId: account.id,
-          profit: Number(it.p),
-          timestamp: new Date(Number(it.t) * 1000),
-        }));
+        // Insert trades if any
+        if (tradesPart.length > 0) {
+          const tradesToInsert = tradesPart.map((it: any) => ({
+            accountId: account.id,
+            profit: Number(it.p),
+            timestamp: new Date(Number(it.t) * 1000),
+          }));
+          await storage.addTrades(tradesToInsert);
+        }
 
-        await storage.addTrades(tradesToInsert);
+        // If snapshots were included in the array, apply the latest one to update account balance/equity
+        if (snapshots.length > 0) {
+          const last = snapshots[snapshots.length - 1];
+          await storage.updateAccountStats(account.id, last.balance, last.equity, last.profit ?? await storage.getTotalProfitFromTrades(account.id), last.dailyProfit);
+        } else {
+          // If no snapshot was provided, recompute profit from trades and update profit fields only
+          const tradeTotal = await storage.getTotalProfitFromTrades(account.id);
+          await storage.updateAccountStats(account.id, account.balance, account.equity, tradeTotal);
+        }
 
-        // Recompute totals from trades and update account stats
-        const tradeTotal = await storage.getTotalProfitFromTrades(account.id);
-
-        // Update account profit to match imported history and recalc percent
-        await storage.updateAccountStats(account.id, account.balance, account.equity, tradeTotal);
-
-        return res.json({ status: "ok", inserted: tradesToInsert.length });
+        return res.json({ status: "ok", inserted: tradesPart.length });
       }
 
       // Otherwise treat as single status update (existing behavior)
