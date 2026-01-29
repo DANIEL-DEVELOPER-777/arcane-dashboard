@@ -93,6 +93,13 @@ export async function registerRoutes(
     res.json(account);
   });
 
+  // Debug: list imported trades for an account
+  app.get(`${api.accounts.get.path}/trades`, requireAuth, async (req, res) => {
+    const accountId = Number(req.params.id);
+    const trades = await storage.getTradesByAccount(accountId);
+    res.json(trades.map(t => ({ ...t, timestamp: t.timestamp.toISOString() })));
+  });
+
   app.put(api.accounts.update.path, requireAuth, async (req, res) => {
     const input = api.accounts.update.input.parse(req.body);
     const account = await storage.updateAccount(Number(req.params.id), input);
@@ -141,15 +148,18 @@ export async function registerRoutes(
 
     const snapshots = await storage.getAccountHistoryInRange(accountId, start, end);
 
-    // Build results and ensure synthetic start/end points aligned to requested broker-time
+    // We'll collect results here
     const results: any[] = [];
 
-    if (snapshots.length === 0) {
-      // No snapshots — fall back to trade history (if any) and build synthetic progression
+    // If snapshots are all zeros (e.g. imported snapshots with zero values), prefer trade history
+    const hasNonZeroSnapshot = snapshots.some(s => Number(s.balance) !== 0 || Number(s.equity) !== 0);
+    if (snapshots.length === 0 || !hasNonZeroSnapshot) {
+      // Fallback to trade history (if any) and build synthetic progression
       const trades = await storage.getTradesInRange(accountId, start, end);
 
-      // Start synthetic point at the exact start broker-time with zero cumulative (or before-trade cumulative)
-      let cumulative = 0;
+      // Start cumulative at the sum of trades before start (so chart frames correctly)
+      let cumulative = await storage.getTradeSumBefore(accountId, start);
+
       results.push({ id: `s-${accountId}`, accountId, balance: cumulative, equity: cumulative, timestamp: new Date(start) });
 
       for (const t of trades) {
@@ -202,7 +212,12 @@ export async function registerRoutes(
     const period = (req.query.period as string | undefined) ?? "ALL";
     const accounts = await storage.getAccounts();
 
-    const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+    // compute total balance from trades (canonical source)
+    let totalBalance = 0;
+    for (const acct of accounts) {
+      const acctTotal = await storage.getTotalProfitFromTrades(acct.id);
+      totalBalance += acctTotal;
+    }
 
     // compute period start/end matching broker-time ranges
     const now = new Date();
@@ -242,7 +257,7 @@ export async function registerRoutes(
 
     const results: any[] = [];
     // synthetic start aligned to exact 'start' broker-time
-    if (history.length > 0) {
+    if (history.length > 0 && history.some(h => Number(h.equity) !== 0 || Number(h.balance) !== 0)) {
       results.push({ timestamp: new Date(start), equity: history[0].equity, balance: history[0].balance });
       for (const h of history) results.push(h);
       const nowDate = new Date();
@@ -250,9 +265,26 @@ export async function registerRoutes(
       const last = history[history.length - 1];
       results.push({ timestamp: new Date(periodEnd), equity: last.equity, balance: last.balance });
     } else {
-      // no buckets: add a single point at start and at periodEnd with zero values
-      results.push({ timestamp: new Date(start), equity: 0, balance: 0 });
-      results.push({ timestamp: new Date(end > new Date() ? new Date() : end), equity: 0, balance: 0 });
+      // Fallback to aggregated trades across accounts
+      const unit = period === "1D" ? 'hour' : period === '1W' || period === '1M' ? 'day' : period === '1Y' ? 'month' : 'month';
+      const tradeBuckets = await storage.getTradesAggregatedInRange(start, end, unit as any);
+      if (tradeBuckets.length > 0) {
+        // start point
+        let cumulative = 0;
+        const startPoint = { timestamp: new Date(start), equity: cumulative, balance: cumulative };
+        results.push(startPoint);
+        for (const b of tradeBuckets) {
+          cumulative += b.profit;
+          results.push({ timestamp: b.timestamp, equity: cumulative, balance: cumulative });
+        }
+        const nowDate = new Date();
+        const periodEnd = end > nowDate ? nowDate : end;
+        results.push({ timestamp: new Date(periodEnd), equity: cumulative, balance: cumulative });
+      } else {
+        // no buckets: add a single point at start and at periodEnd with zero values
+        results.push({ timestamp: new Date(start), equity: 0, balance: 0 });
+        results.push({ timestamp: new Date(end > new Date() ? new Date() : end), equity: 0, balance: 0 });
+      }
     }
 
     res.json(results.map(h => ({ timestamp: h.timestamp.toISOString(), equity: h.equity, balance: h.balance })));

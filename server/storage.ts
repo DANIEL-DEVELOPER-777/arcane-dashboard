@@ -42,12 +42,21 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getAccounts(): Promise<Account[]> {
-    return await db.select().from(accounts).orderBy(desc(accounts.lastUpdated));
+    const rows = await db.select().from(accounts).orderBy(desc(accounts.lastUpdated));
+    // Compute balance/profit from trades for each account to ensure UI reflects trade-backed totals
+    const result: Account[] = [];
+    for (const r of rows) {
+      const tradeTotal = await this.getTotalProfitFromTrades(r.id);
+      result.push({ ...r, balance: tradeTotal, profit: tradeTotal });
+    }
+    return result;
   }
 
   async getAccount(id: number): Promise<Account | undefined> {
     const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
-    return account;
+    if (!account) return undefined;
+    const tradeTotal = await this.getTotalProfitFromTrades(account.id);
+    return { ...account, balance: tradeTotal, profit: tradeTotal };
   }
 
   async getAccountByToken(token: string): Promise<Account | undefined> {
@@ -74,21 +83,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAccountStats(id: number, balance: number, equity: number, profit: number, dailyProfit?: number): Promise<Account> {
+    // Recompute totals from trades: balance and profit are derived from trade history
+    const tradeTotal = await this.getTotalProfitFromTrades(id);
+
+    // Use tradeTotal as canonical balance/profit
+    const canonicalBalance = tradeTotal;
+    const canonicalProfit = tradeTotal;
+
     // Calculate starting balance for total profit (balance before all profit was made)
-    const startingBalance = balance - profit;
-    const profitPercent = startingBalance > 0 ? (profit / startingBalance) * 100 : 0;
-    
-    // Calculate daily profit percent based on daily starting balance
-    const dailyProfitValue = dailyProfit ?? 0;
-    const dailyStartingBalance = balance - dailyProfitValue;
+    const startingBalance = canonicalBalance - canonicalProfit;
+    const profitPercent = startingBalance > 0 ? (canonicalProfit / startingBalance) * 100 : 0;
+
+    // Calculate daily profit percent based on trades for today if not explicitly provided
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const dailyProfitValue = dailyProfit ?? (await this.getAccountProfitInRange(id, startOfDay, endOfDay));
+    const dailyStartingBalance = canonicalBalance - dailyProfitValue;
     const dailyProfitPercentCalc = dailyStartingBalance > 0 ? (dailyProfitValue / dailyStartingBalance) * 100 : 0;
-    
+
     const [account] = await db
       .update(accounts)
       .set({
-        balance,
+        balance: canonicalBalance,
         equity,
-        profit,
+        profit: canonicalProfit,
         profitPercent,
         dailyProfit: dailyProfitValue,
         dailyProfitPercent: dailyProfitPercentCalc,
@@ -96,11 +115,11 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(accounts.id, id))
       .returning();
-    
-    // Record snapshot
+
+    // Record snapshot (use canonicalBalance/equity)
     await this.addEquitySnapshot({
       accountId: id,
-      balance,
+      balance: canonicalBalance,
       equity,
     });
 
@@ -230,6 +249,11 @@ export class DatabaseStorage implements IStorage {
       GROUP BY ts ORDER BY ts ASC
     `);
     return result.rows.map((r: any) => ({ timestamp: new Date(r.ts), profit: Number(r.total) }));
+  }
+
+  async getTradeSumBefore(accountId: number, at: Date): Promise<number> {
+    const res = await db.execute(sql`SELECT COALESCE(SUM(profit),0) as total FROM trades WHERE account_id = ${accountId} AND timestamp < ${at}`);
+    return Number(res.rows[0]?.total ?? 0);
   }
 
   async getPortfolioHistory(limit = 100): Promise<{ timestamp: Date, equity: number, balance: number }[]> {
