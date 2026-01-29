@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { clsx } from "clsx";
 import { formatCurrency, formatPercent } from "@/lib/format";
-import { useAccountHistory } from "@/hooks/use-accounts";
+import { useAccountHistory, useAccountProfit } from "@/hooks/use-accounts";
 
 interface AccountCardProps {
   account: Account;
