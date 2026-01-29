@@ -25,6 +25,7 @@ const periodLabels: Record<string, string> = {
   "ALL": "All"
 };
 
+
 export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProps) {
   const [activePeriod, setActivePeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
 
@@ -32,6 +33,26 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     setActivePeriod(period);
     onPeriodChange(period);
   };
+
+  // --- UI: Timeframe selector on the left ---
+  const Selector = (
+    <div className="flex bg-black/20 backdrop-blur-md rounded-full p-1 border border-white/5 w-auto overflow-x-auto no-scrollbar">
+      {["1D", "1W", "1M", "1Y", "ALL"].map((p) => (
+        <button
+          key={p}
+          onClick={() => handlePeriodChange(p as any)}
+          className={clsx(
+            "sm:flex-none px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium transition-all duration-300 whitespace-nowrap",
+            activePeriod === p 
+              ? "bg-white text-black shadow-lg shadow-white/10" 
+              : "text-muted-foreground hover:text-white"
+          )}
+        >
+          {periodLabels[p]}
+        </button>
+      ))}
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -47,20 +68,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
         <div className="text-center px-4">
           <p className="text-muted-foreground mb-4">No data available for this period</p>
           <div className="flex flex-wrap gap-2 justify-center">
-             {["1D", "1W", "1M", "1Y", "ALL"].map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePeriodChange(p as any)}
-                className={clsx(
-                  "px-3 py-1 rounded-full text-xs font-medium transition-all",
-                  activePeriod === p 
-                    ? "bg-white text-black" 
-                    : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white"
-                )}
-              >
-                {periodLabels[p]}
-              </button>
-            ))}
+            {Selector}
           </div>
         </div>
       </div>
@@ -85,6 +93,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
   const numericData = data ? data.map(d => ({ ...d, ts: parseTimestampMs(d.timestamp) })) : undefined;
   // Ensure points are sorted by timestamp so domain starts at the exact first trade
   const sortedData = numericData ? [...numericData].sort((a,b) => (a.ts! - b.ts!)) : undefined;
+
 
   // Compute strict period start/end boundaries (hard boundaries)
   const computePeriodRange = (period: string) => {
@@ -111,35 +120,50 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     // Ensure ts is normalized to milliseconds when checking
     const normalized = (sortedData ?? []).map(d => ({ ...d, ts: d.ts! < 1e11 ? d.ts! * 1000 : d.ts! }));
     const validData = normalized.filter(d => (d.ts ?? 0) > MIN_VALID_SECONDS * 1000);
+    // For portfolio ALL, use the earliest ts across all accounts (if provided via prop)
+    // Otherwise, fallback to min of this chart's data
     const minTs = validData.length > 0 ? Math.min(...validData.map(d => d.ts!)) : Date.now();
     return { start: minTs, end: Date.now() };
   };
 
   const { start: periodStart, end: periodEnd } = computePeriodRange(activePeriod);
 
-  // Generate ticks based on periodStart/periodEnd
+
+  // Generate ticks based on periodStart/periodEnd, always include zero-points
   const generateTicks = (min: number, max: number, period: string) => {
     const ticks: number[] = [];
     if (period === "1D") {
+      // Always include 00:00
+      ticks.push(startOfDay(new Date(min)).getTime());
       for (let t = min; t <= max; t += 3600000) ticks.push(t);
     } else if (period === "1W") {
+      // Always include Monday
+      const monday = startOfWeek(new Date(min), { weekStartsOn: 1 });
+      ticks.push(monday.getTime());
       for (let t = min; t <= max; t += 86400000) ticks.push(t);
     } else if (period === "1M") {
+      // Always include Week 1
+      ticks.push(startOfMonth(new Date(min)).getTime());
       for (let t = min; t <= max; t = addDays(new Date(t), 7).getTime()) ticks.push(t);
     } else if (period === "1Y") {
+      // Always include January
+      ticks.push(new Date(new Date(min).getFullYear(), 0, 1).getTime());
       for (let m = 0; ; m++) {
         const dt = addMonths(new Date(min), m).getTime();
         if (dt > max) break;
         ticks.push(new Date(dt).getTime());
       }
     } else {
+      // ALL: Always include first month of account creation
+      ticks.push(new Date(min).getTime());
       for (let m = 0; ; m++) {
         const dt = addMonths(new Date(min), m).getTime();
         if (dt > max) break;
         ticks.push(new Date(dt).getTime());
       }
     }
-    return ticks;
+    // Remove duplicates and sort
+    return Array.from(new Set(ticks)).sort((a, b) => a - b);
   };
 
   const ticks = generateTicks(periodStart, periodEnd, activePeriod);
@@ -149,25 +173,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     <div className="glass-panel rounded-3xl p-4 md:p-8 relative overflow-hidden group">
       {/* Header with period toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
-        <div>
-        </div>
-        
-        <div className="flex bg-black/20 backdrop-blur-md rounded-full p-1 border border-white/5 w-auto overflow-x-auto no-scrollbar">
-          {["1D", "1W", "1M", "1Y", "ALL"].map((p) => (
-            <button
-              key={p}
-              onClick={() => handlePeriodChange(p as any)}
-              className={clsx(
-                "sm:flex-none px-3 md:px-4 py-1.5 rounded-full text-[10px] md:text-xs font-medium transition-all duration-300 whitespace-nowrap",
-                activePeriod === p 
-                  ? "bg-white text-black shadow-lg shadow-white/10" 
-                  : "text-muted-foreground hover:text-white"
-              )}
-            >
-              {periodLabels[p]}
-            </button>
-          ))}
-        </div>
+        <div>{Selector}</div>
       </div>
 
       {/* Chart */}

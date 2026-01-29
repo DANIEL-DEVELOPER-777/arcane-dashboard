@@ -6,10 +6,10 @@
 #property strict
 
 // Simply paste the full URL from the dashboard here
-input string WebhookURL = "http://18.134.126.63:5000/api/webhook/mt5/192a28a5-33b4-4100-8ae2-55831986eca0"; 
+input string API_Link = "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE";
 
 void OnStart() {
-   if(WebhookURL == "" || WebhookURL == "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE") {
+   if(API_Link == "" || API_Link == "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE") {
       Alert("Error: Please paste your specific Webhook URL from the Arcane Dashboard.");
       return;
    }
@@ -70,7 +70,7 @@ void SendToServer(string json) {
    char result[];
    string responseHeaders;
 
-   int code = WebRequest("POST", WebhookURL, headers, 10000, postData, result, responseHeaders);
+   int code = WebRequest("POST", API_Link, headers, 10000, postData, result, responseHeaders);
    
    if(code == 200) {
       Print("SUCCESS: History Uploaded.");
@@ -93,6 +93,6 @@ void SendStatus() {
    char result[];
    string responseHeaders;
 
-   int code2 = WebRequest("POST", WebhookURL, headers, 10000, statusData, result, responseHeaders);
+   int code2 = WebRequest("POST", API_Link, headers, 10000, statusData, result, responseHeaders);
    if(code2 == 200) Print("SUCCESS: Account balance synced.");
 }

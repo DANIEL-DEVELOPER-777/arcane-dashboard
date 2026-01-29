@@ -6,10 +6,10 @@
 #property strict
 
 // Simply paste the full URL from the dashboard here
-input string WebhookURL = "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE"; 
+input string API_Link = "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE"; 
 
 int OnInit() {
-   if(WebhookURL == "" || WebhookURL == "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE") {
+   if(API_Link == "" || API_Link == "http://18.134.126.63:5000/api/webhook/mt5/YOUR_TOKEN_HERE") {
       Alert("Error: Please paste your specific Webhook URL from the Arcane Dashboard.");
       return(INIT_PARAMETERS_INCORRECT);
    }
@@ -72,7 +72,7 @@ void SendData(string json) {
    char result[];
    string responseHeaders;
    
-   int res = WebRequest("POST", WebhookURL, headers, 3000, postData, result, responseHeaders);
+   int res = WebRequest("POST", API_Link, headers, 3000, postData, result, responseHeaders);
    
    if(res == -1) {
       Print("Error in WebRequest. Check 'Tools -> Options -> Expert Advisors -> Allow WebRequest for listed URL'");
