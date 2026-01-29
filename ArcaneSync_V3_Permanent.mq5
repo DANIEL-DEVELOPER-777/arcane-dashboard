@@ -26,12 +26,16 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
    // Check if a deal was added to history
    if(trans.type == TRADE_TRANSACTION_DEAL_ADD) {
       ulong ticket = trans.deal;
-      
       if(HistoryDealSelect(ticket)) {
          long entry = HistoryDealGetInteger(ticket, DEAL_ENTRY);
-         
+         long dealType = HistoryDealGetInteger(ticket, DEAL_TYPE);
+         // If deposit/withdrawal/credit/charge, send only status snapshot
+         if(dealType == DEAL_TYPE_CREDIT || dealType == DEAL_TYPE_CHARGE || dealType == DEAL_TYPE_BALANCE || dealType == DEAL_TYPE_DEPOSIT || dealType == DEAL_TYPE_WITHDRAWAL) {
+            SendStatusSnapshot();
+            Print("Deposit/withdrawal detected, sent status snapshot only.");
+         }
          // DEAL_ENTRY_OUT means a trade was closed (Profit/Loss realized)
-         if(entry == DEAL_ENTRY_OUT) {
+         else if(entry == DEAL_ENTRY_OUT) {
             SendTrade(ticket);
          }
       }
@@ -51,6 +55,9 @@ void SendTrade(ulong ticket) {
    PrintFormat("Synced Trade Ticket #%d", ticket);
 
    // 2. Send the Account Status Snapshot
+   SendStatusSnapshot();
+// Send only the account status snapshot (for deposit/withdrawal events)
+void SendStatusSnapshot() {
    double balance = AccountInfoDouble(ACCOUNT_BALANCE);
    double equity = AccountInfoDouble(ACCOUNT_EQUITY);
    double dailyProfit = equity - balance; // approximation
@@ -58,6 +65,7 @@ void SendTrade(ulong ticket) {
                                      balance, equity, equity - balance, dailyProfit);
    SendData(statusJson);
    Print("Sent status snapshot to server.");
+}
 }
 
 // Helper function to handle WebRequests

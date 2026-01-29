@@ -296,16 +296,42 @@ export async function registerRoutes(
   });
 
   app.get(api.portfolio.history.path, requireAuth, async (req, res) => {
-    const period = (req.query.period as string | undefined) ?? "ALL";
 
+    const period = (req.query.period as string | undefined) ?? "ALL";
     // compute broker-time start/end
     const now = new Date();
     let start: Date, end: Date;
-    if (period === "1D") { start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999); }
-    else if (period === "1W") { const day = now.getDay(); const diffToMonday = (day + 6) % 7; const monday = new Date(now); monday.setDate(now.getDate() - diffToMonday); monday.setHours(0,0,0,0); start = monday; const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999); end = sunday; }
-    else if (period === "1M") { start = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999); }
-    else if (period === "1Y") { start = new Date(now.getFullYear(), 0, 1, 0,0,0,0); end = new Date(now.getFullYear(), 11, 31, 23,59,59,999); }
-    else { start = new Date(0); end = new Date(); }
+    if (period === "1D") {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0,0,0,0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23,59,59,999);
+    } else if (period === "1W") {
+      const day = now.getDay();
+      const diffToMonday = (day + 6) % 7;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - diffToMonday);
+      monday.setHours(0,0,0,0);
+      start = monday;
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23,59,59,999);
+      end = sunday;
+    } else if (period === "1M") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999);
+    } else if (period === "1Y") {
+      start = new Date(now.getFullYear(), 0, 1, 0,0,0,0);
+      end = new Date(now.getFullYear(), 11, 31, 23,59,59,999);
+    } else {
+      // ALL: use earliest account creation/trade/snapshot date across all accounts
+      const accounts = await storage.getAccounts();
+      let minTs = Date.now();
+      for (const acct of accounts) {
+        const ts = await storage.getAccountEarliestTimestamp(acct.id);
+        if (ts && ts < minTs) minTs = ts;
+      }
+      start = new Date(minTs);
+      end = new Date();
+    }
 
     const history = await storage.getPortfolioHistoryInRange(start, end, period);
 
