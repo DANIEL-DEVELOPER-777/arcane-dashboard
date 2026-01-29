@@ -86,34 +86,50 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
   // Ensure points are sorted by timestamp so domain starts at the exact first trade
   const sortedData = numericData ? [...numericData].sort((a,b) => (a.ts! - b.ts!)) : undefined;
 
-  const domainMin = sortedData && sortedData.length ? sortedData[0].ts! : undefined;
-  const domainMax = sortedData && sortedData.length ? sortedData[sortedData.length - 1].ts! : Date.now();
+  // Compute strict period start/end boundaries (hard boundaries)
+  const computePeriodRange = (period: string) => {
+    const now = new Date();
+    if (period === '1D') return { start: startOfDay(now).getTime(), end: (new Date(startOfDay(now).getTime()).setHours(23,59,59,999)) };
+    if (period === '1W') {
+      const monday = startOfWeek(now, { weekStartsOn: 1 });
+      const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23,59,59,999);
+      return { start: monday.getTime(), end: sunday.getTime() };
+    }
+    if (period === '1M') {
+      const start = startOfMonth(now).getTime();
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999).getTime();
+      return { start, end };
+    }
+    if (period === '1Y') {
+      const start = new Date(now.getFullYear(), 0, 1, 0,0,0,0).getTime();
+      const end = new Date(now.getFullYear(), 11, 31, 23,59,59,999).getTime();
+      return { start, end };
+    }
+    // ALL: use earliest data point (first trade or snapshot) as start and now as end
+    const earliest = sortedData && sortedData.length ? sortedData[0].ts! : undefined;
+    return { start: earliest ?? Date.now(), end: Date.now() };
+  };
 
-  // Generate ticks based on active period
-  const generateTicks = (min: number | undefined, max: number, period: string) => {
-    if (!min) return [] as number[];
+  const { start: periodStart, end: periodEnd } = computePeriodRange(activePeriod);
+
+  // Generate ticks based on periodStart/periodEnd
+  const generateTicks = (min: number, max: number, period: string) => {
     const ticks: number[] = [];
     if (period === "1D") {
-      const start = startOfDay(new Date(min)).getTime();
-      for (let t = start; t <= max; t += 3600000) ticks.push(t);
+      for (let t = min; t <= max; t += 3600000) ticks.push(t);
     } else if (period === "1W") {
-      const start = startOfWeek(new Date(min), { weekStartsOn: 1 }).getTime();
-      for (let t = start; t <= max; t += 86400000) ticks.push(t);
+      for (let t = min; t <= max; t += 86400000) ticks.push(t);
     } else if (period === "1M") {
-      const start = startOfMonth(new Date(min)).getTime();
-      for (let t = start; t <= max; t = addDays(new Date(t), 7).getTime()) ticks.push(t);
+      for (let t = min; t <= max; t = addDays(new Date(t), 7).getTime()) ticks.push(t);
     } else if (period === "1Y") {
-      const start = new Date(new Date(min).getFullYear(), 0, 1).getTime();
       for (let m = 0; ; m++) {
-        const dt = addMonths(new Date(start), m).getTime();
+        const dt = addMonths(new Date(min), m).getTime();
         if (dt > max) break;
         ticks.push(new Date(dt).getTime());
       }
     } else {
-      // ALL: monthly ticks from start month to max
-      const start = new Date(new Date(min).getFullYear(), new Date(min).getMonth(), 1).getTime();
       for (let m = 0; ; m++) {
-        const dt = addMonths(new Date(start), m).getTime();
+        const dt = addMonths(new Date(min), m).getTime();
         if (dt > max) break;
         ticks.push(new Date(dt).getTime());
       }
@@ -121,7 +137,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     return ticks;
   };
 
-  const ticks = generateTicks(domainMin, domainMax, activePeriod);
+  const ticks = generateTicks(periodStart, periodEnd, activePeriod);
 
 
   return (
@@ -168,18 +184,19 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                 if (activePeriod === '1D') return format(new Date(Number(val)), 'HH:mm');
                 if (activePeriod === '1W') return format(new Date(Number(val)), 'EEE');
                 if (activePeriod === '1M') {
-                  const monthStart = startOfMonth(new Date(domainMin || Number(val)));
+                  const monthStart = startOfMonth(new Date(periodStart));
                   const weekNum = Math.floor((Number(val) - monthStart.getTime()) / (7 * 24 * 3600000)) + 1;
                   return `Week ${weekNum}`;
                 }
                 if (activePeriod === '1Y') return format(new Date(Number(val)), 'MMM');
                 return format(new Date(Number(val)), 'MMM yyyy');
               }}
-              minTickGap={20}
-              domain={[(domainMin ?? 'dataMin') as any, 'dataMax']}
+              minTickGap={(activePeriod === '1D' || activePeriod === '1W') ? 0 : 20}
+              domain={[periodStart as any, periodEnd as any]}
               type="number"
               scale="time"
               ticks={ticks}
+              allowDataOverflow={false}
             />
             <YAxis 
               hide

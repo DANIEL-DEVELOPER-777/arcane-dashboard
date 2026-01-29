@@ -154,34 +154,33 @@ export async function registerRoutes(
     const period = (req.query.period as string | undefined) ?? "ALL";
 
     // compute broker-time start/end using server timezone
-    const { start, end } = (() => {
-      const now = new Date();
-      const startOfDay = (d: Date) => { const s = new Date(d); s.setHours(0,0,0,0); return s; };
-      const endOfDay = (d: Date) => { const e = new Date(d); e.setHours(23,59,59,999); return e; };
-      if (period === "1D") return { start: startOfDay(now), end: endOfDay(now) };
-      if (period === "1W") {
-        const day = now.getDay(); // 0=Sunday
-        const diffToMonday = (day + 6) % 7; // days since Monday
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - diffToMonday);
-        monday.setHours(0,0,0,0);
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23,59,59,999);
-        return { start: monday, end: sunday };
-      }
-      if (period === "1M") {
-        const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        return { start, end };
-      }
-      if (period === "1Y") {
-        const start = new Date(now.getFullYear(), 0, 1, 0,0,0,0);
-        const end = new Date(now.getFullYear(), 11, 31, 23,59,59,999);
-        return { start, end };
-      }
-      return { start: new Date(0), end: new Date() };
-    })();
+    // compute strict broker-time start/end for the requested period
+    let start: Date;
+    let end: Date;
+    const now = new Date();
+    const startOfDay = (d: Date) => { const s = new Date(d); s.setHours(0,0,0,0); return s; };
+    const endOfDay = (d: Date) => { const e = new Date(d); e.setHours(23,59,59,999); return e; };
+
+    if (period === "1D") { start = startOfDay(now); end = endOfDay(now); }
+    else if (period === "1W") {
+      const day = now.getDay(); // 0=Sunday
+      const diffToMonday = (day + 6) % 7; // days since Monday
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - diffToMonday);
+      monday.setHours(0,0,0,0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23,59,59,999);
+      start = monday; end = sunday;
+    }
+    else if (period === "1M") { start = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0); end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23,59,59,999); }
+    else if (period === "1Y") { start = new Date(now.getFullYear(), 0, 1, 0,0,0,0); end = new Date(now.getFullYear(), 11, 31, 23,59,59,999); }
+    else {
+      // ALL: choose earliest meaningful timestamp: earliest trade, snapshot, or account creation
+      const ts = await storage.getAccountEarliestTimestamp(accountId);
+      start = ts ? new Date(ts) : new Date(0);
+      end = new Date();
+    }
 
     const snapshots = await storage.getAccountHistoryInRange(accountId, start, end);
 
@@ -204,8 +203,8 @@ export async function registerRoutes(
         results.push({ id: `t-${t.id}`, accountId, balance: cumulative, equity: cumulative, timestamp: t.timestamp });
       }
 
-      const now = new Date();
-      const periodEnd = end > now ? now : end;
+      const nowDate = new Date();
+      const periodEnd = end > nowDate ? nowDate : end;
       results.push({ id: `e-${accountId}`, accountId, balance: cumulative, equity: cumulative, timestamp: new Date(periodEnd) });
 
       return res.json(results.map(r => ({ ...r, timestamp: r.timestamp.toISOString() })));
@@ -228,8 +227,8 @@ export async function registerRoutes(
     for (const s of snapshots) results.push(s);
 
     // End point: choose latest snapshot <= end or use last snapshot or current account balance; place at min(end, now)
-    const now = new Date();
-    const periodEnd = end > now ? now : end;
+    const nowDate = new Date();
+    const periodEnd = end > nowDate ? nowDate : end;
     const endSnap = await storage.getAccountSnapshotBeforeOrAt(accountId, end);
     if (endSnap) {
       results.push({ id: `e-${accountId}`, accountId, balance: endSnap.balance, equity: endSnap.equity, timestamp: new Date(periodEnd) });

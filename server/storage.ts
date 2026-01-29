@@ -186,13 +186,16 @@ export class DatabaseStorage implements IStorage {
     const result = await db.execute(sql`
       SELECT * FROM equity_snapshots WHERE account_id = ${accountId} AND timestamp BETWEEN ${start} AND ${end} ORDER BY timestamp ASC
     `);
-    return result.rows.map((r: any) => ({
-      id: Number(r.id),
-      accountId: Number(r.account_id),
-      balance: Number(r.balance),
-      equity: Number(r.equity),
-      timestamp: new Date(r.timestamp),
-    }));
+    return result.rows.map((r: any) => {
+      const ts = r.timestamp ? new Date(r.timestamp) : new Date();
+      return {
+        id: Number(r.id),
+        accountId: Number(r.account_id),
+        balance: Number(r.balance),
+        equity: Number(r.equity),
+        timestamp: ts,
+      };
+    });
   }
 
   // Compute profit from trades in the range (do NOT use snapshot diffs for profit calculations)
@@ -257,7 +260,10 @@ export class DatabaseStorage implements IStorage {
       FROM trades WHERE timestamp BETWEEN ${start} AND ${end}
       GROUP BY ts ORDER BY ts ASC
     `);
-    return result.rows.map((r: any) => ({ timestamp: new Date(r.ts), profit: Number(r.total) }));
+    return result.rows.map((r: any) => {
+      const ts = r.ts ? new Date(r.ts) : new Date();
+      return { timestamp: ts, profit: Number(r.total) };
+    });
   }
 
   async getTradeSumBefore(accountId: number, at: Date): Promise<number> {
@@ -286,12 +292,42 @@ export class DatabaseStorage implements IStorage {
     return baseBalance + tradesAfter;
   }
 
+  // Earliest timestamps helpers: trades, snapshots, or account.lastUpdated
+  async getEarliestTradeTimestamp(accountId: number): Promise<number | null> {
+    const res = await db.execute(sql`SELECT MIN(timestamp) as ts FROM trades WHERE account_id = ${accountId}`);
+    const val = res.rows[0]?.ts;
+    if (!val) return null;
+    return new Date(val).getTime();
+  }
+
+  async getEarliestSnapshotTimestamp(accountId: number): Promise<number | null> {
+    const res = await db.execute(sql`SELECT MIN(timestamp) as ts FROM equity_snapshots WHERE account_id = ${accountId}`);
+    const val = res.rows[0]?.ts;
+    if (!val) return null;
+    return new Date(val).getTime();
+  }
+
+  async getAccountEarliestTimestamp(accountId: number): Promise<number | null> {
+    const tradeTs = await this.getEarliestTradeTimestamp(accountId);
+    const snapTs = await this.getEarliestSnapshotTimestamp(accountId);
+    const [acct] = await db.select().from(accounts).where(eq(accounts.id, accountId));
+    // Prefer account createdAt if present, otherwise fallback to lastUpdated
+    const acctTs = acct ? (acct.createdAt ? new Date(acct.createdAt).getTime() : (acct.lastUpdated ? new Date(acct.lastUpdated).getTime() : null)) : null;
+    const candidates = [tradeTs, snapTs].filter((v: any) => typeof v === 'number') as number[];
+    // If no trade or snapshot timestamps, return account timestamp fallback (createdAt/lastUpdated) when available
+    if (candidates.length === 0) return acctTs;
+    return Math.min(...candidates, ...(acctTs ? [acctTs] : []));
+  }
+
   async getPortfolioHistory(limit = 100): Promise<{ timestamp: Date, equity: number, balance: number }[]> {
     const result = await db.execute(sql`
       SELECT timestamp, equity, balance FROM equity_snapshots
       ORDER BY timestamp DESC LIMIT ${limit}
     `);
-    return result.rows.map((r: any) => ({ timestamp: new Date(r.timestamp), equity: Number(r.equity), balance: Number(r.balance) }));
+    return result.rows.map((r: any) => {
+      const ts = r.timestamp ? new Date(r.timestamp) : new Date();
+      return { timestamp: ts, equity: Number(r.equity), balance: Number(r.balance) };
+    });
   }
 
   async getPortfolioHistoryInRange(start: Date, end: Date, period: string = "ALL"): Promise<{ timestamp: Date, equity: number, balance: number }[]> {
@@ -302,7 +338,10 @@ export class DatabaseStorage implements IStorage {
       FROM equity_snapshots WHERE timestamp BETWEEN ${start} AND ${end}
       GROUP BY ts ORDER BY ts ASC
     `);
-    const rows = result.rows.map((row: any) => ({ timestamp: new Date(row.ts), equity: Number(row.equity), balance: Number(row.balance) }));
+    const rows = result.rows.map((row: any) => {
+      const ts = row.ts ? new Date(row.ts) : new Date();
+      return { timestamp: ts, equity: Number(row.equity), balance: Number(row.balance) };
+    });
 
     // If there are no snapshot buckets, fall back to aggregated trades
     if (rows.length === 0) {
