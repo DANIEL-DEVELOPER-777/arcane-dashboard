@@ -72,18 +72,13 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
 
   // Prepare numeric timestamp field for better domain control (so 'ALL' can span from earliest trade)
   const parseTimestampMs = (t: any) => {
-    // If timestamp is a number, assume seconds when it's small (< 1e12), otherwise milliseconds
-    if (typeof t === 'number') return t > 1e12 ? t : t * 1000;
-    // If string of digits, treat similarly
-    if (typeof t === 'string') {
-      if (/^\d+$/.test(t)) {
-        const n = Number(t);
-        return n > 1e12 ? n : n * 1000;
-      }
-      // ISO date string
-      return new Date(t).getTime();
+    // Prefer explicit seconds -> ms conversion: new Date(Number(trade.timestamp) * 1000)
+    const n = Number(t);
+    if (!Number.isNaN(n)) {
+      // If number looks like milliseconds already (>1e12), keep it, otherwise treat as seconds and multiply
+      return n > 1e12 ? n : n * 1000;
     }
-    // Fallback
+    // Fallback: parse ISO string
     return new Date(t).getTime();
   };
 
@@ -135,6 +130,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
               minTickGap={20}
               domain={["dataMin", "dataMax"]}
               type="number"
+              scale="time"
             />
             <YAxis 
               hide
@@ -143,9 +139,10 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
             <Tooltip
               content={({ active, payload, label }) => {
                 if (active && payload && payload.length) {
+                  const dateLabel = activePeriod === "ALL" ? format(new Date(Number(label)), "MMM yyyy") : format(new Date(Number(label)), "MMM d, HH:mm");
                   return (
                     <div className="bg-zinc-900/90 backdrop-blur-xl border border-white/10 p-2 md:p-3 rounded-xl shadow-2xl">
-                      <p className="text-zinc-400 text-[10px] md:text-xs mb-1">{format(new Date(label), "MMM d, HH:mm")}</p>
+                      <p className="text-zinc-400 text-[10px] md:text-xs mb-1">{dateLabel}</p>
                       <p className="text-white font-bold text-sm md:text-lg">
                         {formatCurrency(payload[0].value as number)}
                       </p>
