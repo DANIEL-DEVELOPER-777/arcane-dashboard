@@ -253,11 +253,9 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                   return format(date, 'MMM');
                 }}
                 minTickGap={0}
-                domain={[periodStart as any, periodEnd as any]}
                 type="number"
-                scale="time"
                 ticks={chartTicks}
-                allowDataOverflow={false}
+                allowDataOverflow={true}
               />
               <YAxis 
                 hide
