@@ -223,7 +223,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
         </div>
 
         {/* Chart */}
-        <div className="h-[200px] md:h-[300px] w-full -ml-2">
+        <div className="h-[200px] md:h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={sortedData}>
               <defs>
@@ -263,7 +263,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                 ticks={chartTicks}
                 domain={[domainStartNudged as any, periodEnd as any]}
                 allowDataOverflow={false}
-                padding={{ left: 12, right: 12 }}
+                padding={{ left: 24, right: 12 }}
               />
               <YAxis 
                 hide
