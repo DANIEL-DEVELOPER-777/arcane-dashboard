@@ -160,25 +160,38 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
         ticks.push(new Date(monday).setDate(monday.getDate() + i));
       }
     } else if (activePeriod === '1M') {
-      // Weekly ticks starting from day 1
+      // Weekly ticks starting from day 1 - ensure Week 1 is included
       const monthStart = startOfMonth(new Date(periodStart));
-      for (let i = 0; i < 5; i++) {
-        ticks.push(new Date(monthStart).setDate(monthStart.getDate() + (i * 7)));
+      const monthEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0);
+      for (let i = 0; i <= 4; i++) {
+        const tickDate = new Date(monthStart);
+        tickDate.setDate(monthStart.getDate() + (i * 7));
+        // Only add if within current month
+        if (tickDate.getMonth() === monthStart.getMonth()) {
+          ticks.push(tickDate.getTime());
+        }
       }
     } else if (activePeriod === '1Y') {
-      // Monthly ticks
-      const yearStart = new Date(periodStart);
+      // Monthly ticks - ensure January (month 0) is always included
+      const yearStart = new Date(periodStart.getFullYear(), 0, 1);
       for (let i = 0; i < 12; i++) {
         ticks.push(new Date(yearStart.getFullYear(), i, 1).getTime());
       }
     } else {
-      // ALL: include first month and quarterly intervals
+      // ALL: include earliest month and monthly intervals thereafter
       const allStart = new Date(periodStart);
       const allEnd = new Date(periodEnd);
+      
+      // Start from the first day of the earliest month
+      const firstMonthStart = new Date(allStart.getFullYear(), allStart.getMonth(), 1);
+      ticks.push(firstMonthStart.getTime());
+      
+      // Add monthly ticks from the first month onwards
       const months = (allEnd.getFullYear() - allStart.getFullYear()) * 12 + (allEnd.getMonth() - allStart.getMonth());
-      const interval = Math.max(3, Math.floor(months / 12));
-      for (let i = 0; i * interval <= months; i++) {
-        const d = new Date(allStart);
+      const interval = Math.max(1, Math.floor(months / 12));
+      
+      for (let i = 1; i * interval <= months; i++) {
+        const d = new Date(firstMonthStart);
         d.setMonth(d.getMonth() + i * interval);
         ticks.push(d.getTime());
       }
