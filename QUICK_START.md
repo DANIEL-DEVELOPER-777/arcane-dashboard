@@ -27,7 +27,7 @@ npm run db:push
 ```bash
 npm run build
 ```
-DATABASE_URL="postgresql://neondb_owner:npg_FG7PYDR1cATg@ep-spring-grass-abyv4ixv-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require" NODE_ENV="production"  pm2 start dist/index.cjs --name "arcane-dashboard"
+DATABASE_URL="postgresql://neondb_owner:npg_FG7PYDR1cATg@ep-spring-grass-abyv4ixv-pooler.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require" NODE_ENV="production"  pm2 start dist/index.cjs --name "Arcane"
 ### 6️⃣ Test Locally (Optional)
 ```bash
 npm start
