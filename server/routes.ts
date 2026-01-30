@@ -333,14 +333,14 @@ export async function registerRoutes(
           }
         }
       }
-      // If no timestamps found, use account createdAt or current date
+      // If no timestamps found, use account lastUpdated or current date
       if (minTs === null) {
-        // Get earliest account created date
+        // Get earliest account updated date
         const allAccts = await storage.getAccounts();
         if (allAccts.length > 0) {
           minTs = Math.min(...allAccts
-            .filter(a => a.createdAt)
-            .map(a => new Date(a.createdAt).getTime()));
+            .filter(a => a.lastUpdated)
+            .map(a => new Date(a.lastUpdated!).getTime()));
         }
         if (minTs === null) {
           minTs = Date.now();
