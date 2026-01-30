@@ -161,8 +161,8 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       }
     } else if (activePeriod === '1M') {
       // Weekly ticks starting from day 1 - ensure Week 1 is included
-      const monthStart = startOfMonth(new Date(periodStart));
-      const monthEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0);
+      const periodStartDate = new Date(periodStart);
+      const monthStart = startOfMonth(periodStartDate);
       for (let i = 0; i <= 4; i++) {
         const tickDate = new Date(monthStart);
         tickDate.setDate(monthStart.getDate() + (i * 7));
@@ -173,7 +173,8 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       }
     } else if (activePeriod === '1Y') {
       // Monthly ticks - ensure January (month 0) is always included
-      const yearStart = new Date(periodStart.getFullYear(), 0, 1);
+      const periodStartDate = new Date(periodStart);
+      const yearStart = new Date(periodStartDate.getFullYear(), 0, 1);
       for (let i = 0; i < 12; i++) {
         ticks.push(new Date(yearStart.getFullYear(), i, 1).getTime());
       }
