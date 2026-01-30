@@ -236,13 +236,19 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                 tickFormatter={(val) => {
                   const date = new Date(Number(val));
                   if (activePeriod === '1D') return format(date, 'HH:mm');
-                  if (activePeriod === '1W') return format(date, 'EEE');
+                  if (activePeriod === '1W') {
+                    const periodStartDate = new Date(periodStart);
+                    const monday = startOfWeek(periodStartDate, { weekStartsOn: 1 });
+                    const dayNum = Math.floor((Number(val) - monday.getTime()) / (24 * 3600000)) + 1;
+                    return `Day ${dayNum}`;
+                  }
                   if (activePeriod === '1M') {
                     const monthStart = startOfMonth(new Date(periodStart));
                     const weekNum = Math.floor((Number(val) - monthStart.getTime()) / (7 * 24 * 3600000)) + 1;
                     return `Week ${weekNum}`;
                   }
                   if (activePeriod === '1Y') return format(date, 'MMM');
+                  if (activePeriod === 'ALL') return format(date, 'MMM yyyy');
                   return format(date, 'MMM');
                 }}
                 minTickGap={0}
