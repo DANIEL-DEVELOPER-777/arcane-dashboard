@@ -142,6 +142,10 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
 
   const { start: periodStart, end: periodEnd } = computePeriodRange(activePeriod);
 
+  // Nudge the left domain inward by 1ms so the left-most tick/label
+  // (e.g. Week 1 / Jan) sits inside the domain and is rendered by Recharts.
+  const domainStartNudged = (periodStart as number) - 1;
+
   // Generate ticks based on period to ensure all key labels are shown
   const generateTicks = () => {
     const ticks: number[] = [];
@@ -253,11 +257,13 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                   return format(date, 'MMM');
                 }}
                 minTickGap={0}
-                domain={[periodStart as any, periodEnd as any]}
+                interval={0}
                 type="number"
                 scale="time"
                 ticks={chartTicks}
+                domain={[domainStartNudged as any, periodEnd as any]}
                 allowDataOverflow={false}
+                padding={{ left: 12, right: 12 }}
               />
               <YAxis 
                 hide
