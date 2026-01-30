@@ -324,10 +324,27 @@ export async function registerRoutes(
     } else {
       // ALL: use earliest account creation/trade/snapshot date across all accounts
       const accounts = await storage.getAccounts();
-      let minTs = Date.now();
+      let minTs: number | null = null;
       for (const acct of accounts) {
         const ts = await storage.getAccountEarliestTimestamp(acct.id);
-        if (ts && ts < minTs) minTs = ts;
+        if (ts) {
+          if (minTs === null || ts < minTs) {
+            minTs = ts;
+          }
+        }
+      }
+      // If no timestamps found, use account createdAt or current date
+      if (minTs === null) {
+        // Get earliest account created date
+        const allAccts = await storage.getAccounts();
+        if (allAccts.length > 0) {
+          minTs = Math.min(...allAccts
+            .filter(a => a.createdAt)
+            .map(a => new Date(a.createdAt).getTime()));
+        }
+        if (minTs === null) {
+          minTs = Date.now();
+        }
       }
       start = new Date(minTs);
       end = new Date();

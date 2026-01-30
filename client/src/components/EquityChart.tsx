@@ -142,7 +142,51 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
 
   const { start: periodStart, end: periodEnd } = computePeriodRange(activePeriod);
 
+  // Generate ticks based on period to ensure all key labels are shown
+  const generateTicks = () => {
+    const ticks: number[] = [];
+    
+    if (activePeriod === '1D') {
+      // Every 2 hours, ensuring 00:00 is included
+      const start = startOfDay(new Date(periodStart)).getTime();
+      const end = new Date(periodStart).setHours(23, 59, 59, 999);
+      for (let t = start; t <= end; t += 2 * 60 * 60 * 1000) {
+        ticks.push(t);
+      }
+    } else if (activePeriod === '1W') {
+      // Daily ticks, ensuring all days are shown
+      const monday = startOfWeek(new Date(periodStart), { weekStartsOn: 1 });
+      for (let i = 0; i < 7; i++) {
+        ticks.push(new Date(monday).setDate(monday.getDate() + i));
+      }
+    } else if (activePeriod === '1M') {
+      // Weekly ticks starting from day 1
+      const monthStart = startOfMonth(new Date(periodStart));
+      for (let i = 0; i < 5; i++) {
+        ticks.push(new Date(monthStart).setDate(monthStart.getDate() + (i * 7)));
+      }
+    } else if (activePeriod === '1Y') {
+      // Monthly ticks
+      const yearStart = new Date(periodStart);
+      for (let i = 0; i < 12; i++) {
+        ticks.push(new Date(yearStart.getFullYear(), i, 1).getTime());
+      }
+    } else {
+      // ALL: include first month and quarterly intervals
+      const allStart = new Date(periodStart);
+      const allEnd = new Date(periodEnd);
+      const months = (allEnd.getFullYear() - allStart.getFullYear()) * 12 + (allEnd.getMonth() - allStart.getMonth());
+      const interval = Math.max(3, Math.floor(months / 12));
+      for (let i = 0; i * interval <= months; i++) {
+        const d = new Date(allStart);
+        d.setMonth(d.getMonth() + i * interval);
+        ticks.push(d.getTime());
+      }
+    }
+    return ticks;
+  };
 
+  const chartTicks = generateTicks();
 
   // --- Main Chart Render ---
   return (
@@ -170,21 +214,22 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                 tickLine={false}
                 tick={{ fill: '#666', fontSize: 10 }}
                 tickFormatter={(val) => {
-                  if (activePeriod === '1D') return format(new Date(Number(val)), 'HH:mm');
-                  if (activePeriod === '1W') return format(new Date(Number(val)), 'EEE');
+                  const date = new Date(Number(val));
+                  if (activePeriod === '1D') return format(date, 'HH:mm');
+                  if (activePeriod === '1W') return format(date, 'EEE');
                   if (activePeriod === '1M') {
                     const monthStart = startOfMonth(new Date(periodStart));
                     const weekNum = Math.floor((Number(val) - monthStart.getTime()) / (7 * 24 * 3600000)) + 1;
                     return `Week ${weekNum}`;
                   }
-                  if (activePeriod === '1Y') return format(new Date(Number(val)), 'MMM');
-                  return format(new Date(Number(val)), 'MMM yyyy');
+                  if (activePeriod === '1Y') return format(date, 'MMM');
+                  return format(date, 'MMM');
                 }}
-                minTickGap={(activePeriod === '1D' || activePeriod === '1W') ? 0 : 20}
+                minTickGap={0}
                 domain={[periodStart as any, periodEnd as any]}
                 type="number"
                 scale="time"
-                ticks={undefined}
+                ticks={chartTicks}
                 allowDataOverflow={false}
               />
               <YAxis 
@@ -194,28 +239,36 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
               <Tooltip
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
-                    const dateLabel = activePeriod === "ALL" ? format(new Date(Number(label)), "MMM yyyy") : format(new Date(Number(label)), "MMM d, HH:mm");
-                    // Find the current and previous balance for percent calculation
-                    const idx = sortedData?.findIndex(d => d.ts === label) ?? -1;
-                    let profit = 0, percent = 0, balance = 0, prevBalance = 0;
-                    if (idx >= 0 && sortedData) {
-                      balance = sortedData[idx].balance;
-                      prevBalance = idx > 0 ? sortedData[idx-1].balance : balance;
-                      profit = balance - prevBalance;
-                      // For ALL: percent = profit / (balance - profit) * 100
-                      // For others: percent = profit / prevBalance * 100
-                      if (activePeriod === 'ALL') {
-                        percent = (balance - profit) > 0 ? (profit / (balance - profit)) * 100 : 0;
-                      } else {
-                        percent = prevBalance > 0 ? (profit / prevBalance) * 100 : 0;
-                      }
+                    let dateLabel = '';
+                    const date = new Date(Number(label));
+                    if (activePeriod === 'ALL') dateLabel = format(date, 'MMM yyyy');
+                    else if (activePeriod === '1D') dateLabel = format(date, 'HH:mm');
+                    else if (activePeriod === '1W') dateLabel = format(date, 'EEE, MMM d');
+                    else if (activePeriod === '1M') dateLabel = format(date, 'MMM d');
+                    else if (activePeriod === '1Y') dateLabel = format(date, 'MMM yyyy');
+                    
+                    // Calculate profit and percent: Return % = (Profit / (Balance - Profit)) * 100
+                    let totalProfit = 0, totalPercent = 0;
+                    const currentBalance = payload[0].value as number;
+                    
+                    if (sortedData && sortedData.length > 0) {
+                      // Find first balance at or after period start
+                      const idx = sortedData.findIndex(d => d.ts! >= periodStart);
+                      const startBalance = idx >= 0 ? sortedData[idx].balance : sortedData[0].balance;
+                      totalProfit = currentBalance - startBalance;
+                      const denominator = currentBalance - totalProfit;
+                      totalPercent = denominator > 0 ? (totalProfit / denominator) * 100 : 0;
                     }
+                    
+                    const isProfit = totalProfit >= 0;
                     return (
                       <div className="bg-zinc-900/90 backdrop-blur-xl border border-white/10 p-2 md:p-3 rounded-xl shadow-2xl">
                         <p className="text-zinc-400 text-[10px] md:text-xs mb-1">{dateLabel}</p>
                         <p className="text-white font-bold text-sm md:text-lg">
-                          {formatCurrency(payload[0].value as number)}
-                          <span className="ml-2 text-emerald-400 text-xs font-semibold">{percent.toFixed(2)}%</span>
+                          {formatCurrency(currentBalance)}
+                          <span className={`ml-2 text-xs font-semibold ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {totalPercent.toFixed(2)}%
+                          </span>
                         </p>
                       </div>
                     );
