@@ -163,7 +163,10 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       // Weekly ticks starting from day 1 - ensure Week 1 is included
       const periodStartDate = new Date(periodStart);
       const monthStart = startOfMonth(periodStartDate);
-      for (let i = 0; i <= 4; i++) {
+      // Explicitly add day 1 (Week 1) first
+      ticks.push(monthStart.getTime());
+      // Then add subsequent weeks
+      for (let i = 1; i <= 4; i++) {
         const tickDate = new Date(monthStart);
         tickDate.setDate(monthStart.getDate() + (i * 7));
         // Only add if within current month
@@ -175,7 +178,10 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       // Monthly ticks - ensure January (month 0) is always included
       const periodStartDate = new Date(periodStart);
       const yearStart = new Date(periodStartDate.getFullYear(), 0, 1);
-      for (let i = 0; i < 12; i++) {
+      // Explicitly add January first
+      ticks.push(yearStart.getTime());
+      // Then add remaining months
+      for (let i = 1; i < 12; i++) {
         ticks.push(new Date(yearStart.getFullYear(), i, 1).getTime());
       }
     } else {
