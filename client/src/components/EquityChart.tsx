@@ -243,7 +243,8 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                     return `Day ${dayNum}`;
                   }
                   if (activePeriod === '1M') {
-                    const monthStart = startOfMonth(new Date(periodStart));
+                    const periodStartDate = new Date(periodStart);
+                    const monthStart = startOfMonth(periodStartDate);
                     const weekNum = Math.floor((Number(val) - monthStart.getTime()) / (7 * 24 * 3600000)) + 1;
                     return `Week ${weekNum}`;
                   }
