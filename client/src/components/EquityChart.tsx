@@ -144,7 +144,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
 
   // Nudge the left domain inward by 1ms so the left-most tick/label
   // (e.g. Week 1 / Jan) sits inside the domain and is rendered by Recharts.
-  const domainStartNudged = (periodStart as number) - 1;
+  const domainStartNudged = (periodStart as number) - 0.5;
 
   // Generate ticks based on period to ensure all key labels are shown
   const generateTicks = () => {
