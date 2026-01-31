@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Accounts from "@/pages/Accounts";
 import AccountDetail from "@/pages/AccountDetail";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 function ScrollToTop() {
   const [location] = useLocation();
@@ -44,7 +45,9 @@ function App() {
       <TooltipProvider>
         <ScrollToTop />
         <Toaster />
-        <Router />
+        <ErrorBoundary>
+          <Router />
+        </ErrorBoundary>
       </TooltipProvider>
     </QueryClientProvider>
   );
