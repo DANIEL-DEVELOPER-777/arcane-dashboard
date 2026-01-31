@@ -92,14 +92,30 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
+  // On some platforms (notably Windows) `reusePort` is not supported and will
+  // cause `listen` to throw ENOTSUP. Only enable it when the platform is not
+  // Windows, and fall back to a retry without the option if needed.
+  const listenOpts: any = { port, host: "0.0.0.0" };
+  if (process.platform !== "win32") {
+    listenOpts.reusePort = true;
+  }
+
+  const startServer = () => {
+    httpServer.listen(listenOpts, () => {
       log(`serving on port ${port}`);
-    },
-  );
+    });
+  };
+
+  try {
+    startServer();
+  } catch (err: any) {
+    // If reusePort wasn't supported, retry without it
+    if (err && err.code === "ENOTSUP") {
+      log("reusePort not supported, retrying without it", "express");
+      delete listenOpts.reusePort;
+      startServer();
+    } else {
+      throw err;
+    }
+  }
 })();

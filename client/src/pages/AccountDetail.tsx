@@ -29,6 +29,11 @@ export default function AccountDetail() {
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
 
+  // Hooks must be called unconditionally and before any early return.
+  // Ensure `useAccountProfit` runs every render to stabilize hook order.
+  const tradeProfitQuery = useAccountProfit(id as any, period);
+  const derivedProfit = tradeProfitQuery.data ?? 0;
+
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState("");
   const [copied, setCopied] = useState(false);
@@ -36,8 +41,6 @@ export default function AccountDetail() {
 
   if (authLoading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
-  // If the id param is missing or invalid, show loading instead of crashing during hydration
-  if (id === undefined) return <LoadingScreen />;
   if (!accountLoading && !account) return <Redirect to="/accounts" />;
 
   const apiUrl = `${window.location.origin}/api/webhook/mt5/${account?.token}`;
@@ -84,8 +87,10 @@ export default function AccountDetail() {
   const hist = history || [];
   const initialDeposit = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
   const currentBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
-  const tradeProfitQuery = useAccountProfit(id as any, period);
-  const derivedProfit = tradeProfitQuery.data ?? 0;
+  
+
+  // If the id param is missing or invalid, show loading instead of crashing during hydration
+  if (id === undefined) return <LoadingScreen />;
 
   // Percentage calculation rules:
   // - ALL: percent = TotalProfit / (CurrentBalance - TotalProfit)
