@@ -260,7 +260,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                 ticks={chartTicks}
                 domain={[domainStartNudged as any, periodEnd as any]}
                 allowDataOverflow={false}
-                padding={{ left: 24, right: 48 }}
+                padding={{ left: 48, right: 48 }}
               />
               <YAxis 
                 hide
