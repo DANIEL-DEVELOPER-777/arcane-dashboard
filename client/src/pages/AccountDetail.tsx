@@ -92,15 +92,11 @@ export default function AccountDetail() {
   // If the id param is missing or invalid, show loading instead of crashing during hydration
   if (id === undefined) return <LoadingScreen />;
 
-  // Percentage calculation rules:
-  // - ALL: percent = TotalProfit / (CurrentBalance - TotalProfit)
-  // - Otherwise: percent = TotalProfit / InitialDeposit
+  // Unified percentage calculation for all periods:
+  // Return % = Profit / (Balance - Profit) * 100
   let derivedProfitPercent = 0;
-  if (period === "ALL") {
-    derivedProfitPercent = (currentBalance - derivedProfit) > 0 ? (derivedProfit / (currentBalance - derivedProfit)) * 100 : 0;
-  } else {
-    derivedProfitPercent = initialDeposit > 0 ? (derivedProfit / initialDeposit) * 100 : 0;
-  }
+  const denom = (currentBalance - derivedProfit);
+  derivedProfitPercent = denom > 0 ? (derivedProfit / denom) * 100 : 0;
 
   const isProfit = derivedProfit >= 0;
 

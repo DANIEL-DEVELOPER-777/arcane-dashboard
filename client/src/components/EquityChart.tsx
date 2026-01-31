@@ -28,7 +28,6 @@ const periodLabels: Record<string, string> = {
 
 
 
-import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
 export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProps) {
@@ -59,14 +58,6 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     </div>
   );
 
-  // --- UI: Back button above chart ---
-  const BackButton = (
-    <div className="mb-4 flex items-center">
-      <Link href="/accounts" className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors shrink-0 flex items-center">
-        <ArrowLeft className="w-5 h-5 text-zinc-400" />
-      </Link>
-    </div>
-  );
 
   if (isLoading) {
     return (
@@ -104,7 +95,13 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     return new Date(t).getTime();
   };
 
-  const numericData = data ? data.map(d => ({ ...d, ts: parseTimestampMs(d.timestamp) })) : undefined;
+  const numericData = data ? data.map(d => ({
+    // normalize timestamp and numeric fields so chart always plots `balance`
+    ...d,
+    ts: parseTimestampMs(d.timestamp),
+    balance: Number(d.balance ?? 0),
+    equity: Number(d.equity ?? 0),
+  })) : undefined;
   // Ensure points are sorted by timestamp so domain starts at the exact first trade
   const sortedData = numericData ? [...numericData].sort((a,b) => (a.ts! - b.ts!)) : undefined;
 
@@ -217,7 +214,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
   // --- Main Chart Render ---
   return (
     <>
-      {BackButton}
+      
       <div className="glass-panel rounded-3xl p-4 md:p-8 relative overflow-hidden group">
         {/* Header with period toggle */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
@@ -279,20 +276,23 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                     else if (activePeriod === '1W') dateLabel = format(date, 'EEE, MMM d');
                     else if (activePeriod === '1M') dateLabel = format(date, 'MMM d');
                     else if (activePeriod === '1Y') dateLabel = format(date, 'MMM yyyy');
-                    
+
+                    // Read the balance explicitly from payload to avoid relying on payload order
+                    const balanceEntry = payload.find((p: any) => p.dataKey === 'balance');
+                    const currentBalance = Number(balanceEntry?.value ?? 0);
+
                     // Calculate profit and percent: Return % = (Profit / (Balance - Profit)) * 100
                     let totalProfit = 0, totalPercent = 0;
-                    const currentBalance = payload[0].value as number;
-                    
+
                     if (sortedData && sortedData.length > 0) {
                       // Find first balance at or after period start
                       const idx = sortedData.findIndex(d => d.ts! >= periodStart);
-                      const startBalance = idx >= 0 ? sortedData[idx].balance : sortedData[0].balance;
+                      const startBalance = idx >= 0 ? Number(sortedData[idx].balance) : Number(sortedData[0].balance);
                       totalProfit = currentBalance - startBalance;
                       const denominator = currentBalance - totalProfit;
                       totalPercent = denominator > 0 ? (totalProfit / denominator) * 100 : 0;
                     }
-                    
+
                     const isProfit = totalProfit >= 0;
                     return (
                       <div className="bg-zinc-900/90 backdrop-blur-xl border border-white/10 p-2 md:p-3 rounded-xl shadow-2xl">
