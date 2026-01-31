@@ -68,14 +68,16 @@ export default function AccountDetail() {
 
   const handleUpdate = async () => {
     if (!newName.trim()) return;
-    await updateAccount.mutateAsync({ id, name: newName });
+    if (id === undefined) return;
+    await updateAccount.mutateAsync({ id: id as number, name: newName });
     setIsEditing(false);
     toast({ title: "Updated", description: "Account name updated successfully" });
   };
 
   const handleDelete = async () => {
     try {
-      await deleteAccount.mutateAsync(id);
+      if (id === undefined) return;
+      await deleteAccount.mutateAsync(id as number);
       toast({ title: "Deleted", description: "Account removed successfully" });
       setLocation("/accounts");
     } catch (err: any) {
