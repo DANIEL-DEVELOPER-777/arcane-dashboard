@@ -241,10 +241,8 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                   const date = new Date(Number(val));
                   if (activePeriod === '1D') return format(date, 'HH:mm');
                   if (activePeriod === '1W') {
-                    const periodStartDate = new Date(periodStart);
-                    const monday = startOfWeek(periodStartDate, { weekStartsOn: 1 });
-                    const dayNum = Math.floor((Number(val) - monday.getTime()) / (24 * 3600000)) + 1;
-                    return `Day ${dayNum}`;
+                    // Show weekday names for weekly view (Mon, Tue, Wed...)
+                    return format(date, 'EEE');
                   }
                   if (activePeriod === '1M') {
                     const periodStartDate = new Date(periodStart);

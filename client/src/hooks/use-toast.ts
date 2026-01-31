@@ -179,7 +179,9 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+    // Intentionally run once on mount/unmount to avoid re-subscribing
+    // whenever the toast state object changes.
+  }, [])
 
   return {
     ...state,
