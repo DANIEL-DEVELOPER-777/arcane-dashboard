@@ -187,25 +187,72 @@ export async function registerRoutes(
     // We'll collect results here
     const results: any[] = [];
 
-    // If period is not ALL or snapshots are all zeros, prefer trade history (do NOT use snapshots for timeframe charts)
+    // If period is not ALL or snapshots are empty/zero, prefer aggregated trade buckets to compute per-period profit
     const hasNonZeroSnapshot = snapshots.some(s => Number(s.balance) !== 0 || Number(s.equity) !== 0);
     if (period !== "ALL" || snapshots.length === 0 || !hasNonZeroSnapshot) {
-      // Use trade history (even if snapshots exist) and build synthetic progression
+      // Determine aggregation unit for buckets
+      const unit = period === "1D" ? 'hour' : period === '1W' || period === '1M' ? 'day' : period === '1Y' ? 'month' : 'month';
+
+      // Get aggregated profits per unit
+      const tradeBuckets = await storage.getTradesAggregatedInRange(start, end, unit as any);
+
+      // If we have trade buckets, compute per-bucket balances and profit%.
+      if (tradeBuckets.length > 0) {
+        // Compute startBalance at `start` using current computed balance minus trades after start
+        const totalProfitAll = await storage.getTotalProfitFromTrades(accountId);
+        const tradeSumBefore = await storage.getTradeSumBefore(accountId, start);
+        const acctNow = await storage.getAccount(accountId);
+        const currentComputedBalance = acctNow?.balance ?? 0;
+        const tradesAfterStart = totalProfitAll - tradeSumBefore;
+        let bucketStartBalance = currentComputedBalance - tradesAfterStart;
+
+        // Add synthetic start point
+        results.push({ id: `s-${accountId}`, accountId, balance: bucketStartBalance, equity: bucketStartBalance, profit: 0, profitPercent: 0, timestamp: new Date(start) });
+
+        // For each bucket, compute end balance and profit percent
+        for (const b of tradeBuckets) {
+          const profit = Number(b.profit);
+          const startBal = bucketStartBalance;
+          const endBal = startBal + profit;
+          const denom = endBal - profit; // same as startBal
+          const profitPercent = denom > 0 ? (profit / denom) * 100 : 0;
+          results.push({ id: `b-${accountId}-${b.timestamp.getTime()}`, accountId, balance: endBal, equity: endBal, profit, profitPercent, timestamp: b.timestamp });
+          bucketStartBalance = endBal;
+        }
+
+        // Final synthetic end point at period end
+        const nowDate = new Date();
+        const periodEnd = end > nowDate ? nowDate : end;
+        results.push({ id: `e-${accountId}`, accountId, balance: bucketStartBalance, equity: bucketStartBalance, profit: 0, profitPercent: 0, timestamp: new Date(periodEnd) });
+
+        return res.json(results.map(r => ({ ...r, timestamp: r.timestamp.toISOString() })));
+      }
+
+      // If no trade buckets, fall back to per-trade progression (previous behavior)
       const trades = await storage.getTradesInRange(accountId, start, end);
 
-      // Start cumulative at the sum of trades before start (so chart frames correctly)
-      let cumulative = await storage.getTradeSumBefore(accountId, start);
+      // Compute a realistic starting balance at `start`
+      const totalProfitAll = await storage.getTotalProfitFromTrades(accountId);
+      const tradeSumBefore = await storage.getTradeSumBefore(accountId, start);
+      const acctNow = await storage.getAccount(accountId);
+      const currentComputedBalance = acctNow?.balance ?? 0;
+      const tradesAfterStart = totalProfitAll - tradeSumBefore;
+      let cumulative = currentComputedBalance - tradesAfterStart;
 
-      results.push({ id: `s-${accountId}`, accountId, balance: cumulative, equity: cumulative, timestamp: new Date(start) });
+      results.push({ id: `s-${accountId}`, accountId, balance: cumulative, equity: cumulative, profit: 0, profitPercent: 0, timestamp: new Date(start) });
 
       for (const t of trades) {
-        cumulative += Number(t.profit);
-        results.push({ id: `t-${t.id}`, accountId, balance: cumulative, equity: cumulative, timestamp: t.timestamp });
+        const profit = Number(t.profit);
+        const startBal = cumulative;
+        cumulative += profit;
+        const denom = cumulative - profit; // startBal
+        const profitPercent = denom > 0 ? (profit / denom) * 100 : 0;
+        results.push({ id: `t-${t.id}`, accountId, balance: cumulative, equity: cumulative, profit, profitPercent, timestamp: t.timestamp });
       }
 
       const nowDate = new Date();
       const periodEnd = end > nowDate ? nowDate : end;
-      results.push({ id: `e-${accountId}`, accountId, balance: cumulative, equity: cumulative, timestamp: new Date(periodEnd) });
+      results.push({ id: `e-${accountId}`, accountId, balance: cumulative, equity: cumulative, profit: 0, profitPercent: 0, timestamp: new Date(periodEnd) });
 
       return res.json(results.map(r => ({ ...r, timestamp: r.timestamp.toISOString() })));
     }
@@ -240,6 +287,23 @@ export async function registerRoutes(
     }
 
     // normalize timestamps to ISO
+    // Compute per-point profit and profitPercent for snapshot-based series
+    let prevBalance: number | null = null;
+    for (let i = 0; i < results.length; i++) {
+      const bal = Number(results[i].balance ?? 0);
+      if (prevBalance === null) {
+        results[i].profit = 0;
+        results[i].profitPercent = 0;
+      } else {
+        const profit = bal - prevBalance;
+        const denom = prevBalance;
+        const profitPercent = denom > 0 ? (profit / denom) * 100 : 0;
+        results[i].profit = profit;
+        results[i].profitPercent = profitPercent;
+      }
+      prevBalance = bal;
+    }
+
     res.json(results.map(r => ({ ...r, timestamp: r.timestamp.toISOString() })));
   });
 
@@ -256,8 +320,14 @@ export async function registerRoutes(
     else if (period === "1Y") { start = new Date(now.getFullYear(), 0, 1, 0,0,0,0); end = new Date(now.getFullYear(), 11, 31, 23,59,59,999); }
     else { start = new Date(0); end = new Date(); }
 
-    const profit = await storage.getAccountProfitInRange(accountId, start, end);
-    res.json({ profit });
+    try {
+      const profit = await storage.getAccountProfitInRange(accountId, start, end);
+      res.json({ profit });
+    } catch (err) {
+      console.error('Database error while fetching account profit:', err);
+      // Return 503 Service Unavailable so client can retry later; do not crash the server
+      res.status(503).json({ message: 'Service unavailable' });
+    }
   });
 
   // --- Portfolio Routes ---
@@ -366,25 +436,61 @@ export async function registerRoutes(
       const unit = period === "1D" ? 'hour' : period === '1W' || period === '1M' ? 'day' : period === '1Y' ? 'month' : 'month';
       const tradeBuckets = await storage.getTradesAggregatedInRange(start, end, unit as any);
       if (tradeBuckets.length > 0) {
-        // start point
-        let cumulative = 0;
-        const startPoint = { timestamp: new Date(start), equity: cumulative, balance: cumulative };
-        results.push(startPoint);
+        // Compute portfolio starting balance at `start` by summing per-account start balances
+        const accounts = await storage.getAccounts();
+        let portfolioStartBalance = 0;
+        for (const acct of accounts) {
+          const totalProfitAll = await storage.getTotalProfitFromTrades(acct.id);
+          const tradeSumBefore = await storage.getTradeSumBefore(acct.id, start);
+          const acctNow = await storage.getAccount(acct.id);
+          const currentComputedBalance = acctNow?.balance ?? 0;
+          const tradesAfterStart = totalProfitAll - tradeSumBefore;
+          const acctStartBalance = currentComputedBalance - tradesAfterStart;
+          portfolioStartBalance += acctStartBalance;
+        }
+
+        // Build per-bucket portfolio progression using aggregated trade profits
+        let cumulative = portfolioStartBalance;
+        results.push({ timestamp: new Date(start), equity: cumulative, balance: cumulative, profit: 0, profitPercent: 0 });
         for (const b of tradeBuckets) {
-          cumulative += b.profit;
-          results.push({ timestamp: b.timestamp, equity: cumulative, balance: cumulative });
+          const profit = Number(b.profit);
+          const startBal = cumulative;
+          const endBal = startBal + profit;
+          const denom = endBal - profit; // startBal
+          const profitPercent = denom > 0 ? (profit / denom) * 100 : 0;
+          results.push({ timestamp: b.timestamp, equity: endBal, balance: endBal, profit, profitPercent });
+          cumulative = endBal;
         }
         const nowDate = new Date();
         const periodEnd = end > nowDate ? nowDate : end;
-        results.push({ timestamp: new Date(periodEnd), equity: cumulative, balance: cumulative });
+        results.push({ timestamp: new Date(periodEnd), equity: cumulative, balance: cumulative, profit: 0, profitPercent: 0 });
       } else {
         // no buckets: add a single point at start and at periodEnd with zero values
-        results.push({ timestamp: new Date(start), equity: 0, balance: 0 });
-        results.push({ timestamp: new Date(end > new Date() ? new Date() : end), equity: 0, balance: 0 });
+        results.push({ timestamp: new Date(start), equity: 0, balance: 0, profit: 0, profitPercent: 0 });
+        results.push({ timestamp: new Date(end > new Date() ? new Date() : end), equity: 0, balance: 0, profit: 0, profitPercent: 0 });
       }
     }
 
-    res.json(results.map(h => ({ timestamp: h.timestamp.toISOString(), equity: h.equity, balance: h.balance })));
+    // If this branch used snapshots (history), compute per-point profit and profitPercent similarly
+    if (history.length > 0 && history.some(h => Number(h.equity) !== 0 || Number(h.balance) !== 0)) {
+      let prevBal: number | null = null;
+      for (let i = 0; i < results.length; i++) {
+        const bal = Number(results[i].balance ?? 0);
+        if (prevBal === null) {
+          results[i].profit = 0;
+          results[i].profitPercent = 0;
+        } else {
+          const profit = bal - prevBal;
+          const denom = prevBal;
+          const profitPercent = denom > 0 ? (profit / denom) * 100 : 0;
+          results[i].profit = profit;
+          results[i].profitPercent = profitPercent;
+        }
+        prevBal = bal;
+      }
+    }
+
+    res.json(results.map(h => ({ timestamp: h.timestamp.toISOString(), equity: h.equity, balance: h.balance, profit: h.profit ?? 0, profitPercent: h.profitPercent ?? 0 })));
   });
 
   // --- Webhook Route (No Auth Required - Protected by Token) ---

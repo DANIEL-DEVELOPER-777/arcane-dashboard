@@ -148,14 +148,16 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
     const ticks: number[] = [];
     
     if (activePeriod === '1D') {
-      // Every 2 hours, ensuring 00:00 is included
+      // Every 2 hours from 00:00 to 22:00, then include 23:59 as final tick
       const start = startOfDay(new Date(periodStart)).getTime();
-      const end = new Date(periodStart).setHours(23, 59, 59, 999);
-      for (let t = start; t <= end; t += 2 * 60 * 60 * 1000) {
-        ticks.push(t);
+      const end = new Date(startOfDay(new Date(periodStart)).getTime()).setHours(23, 59, 59, 999);
+      let current = start;
+      while (current <= end) {
+        ticks.push(current);
+        current = addHours(new Date(current), 3).getTime();
       }
-      // Ensure final tick includes end of day (23:59) so chart shows rightmost label
-      if (ticks[ticks.length - 1] < end) ticks.push(end);
+      // If the last tick isn't exactly the end-of-day, ensure 23:59 is present
+      if (ticks.length === 0 || ticks[ticks.length - 1] < end) ticks.push(end);
     } else if (activePeriod === '1W') {
       // Daily ticks, ensuring all days are shown
       const monday = startOfWeek(new Date(periodStart), { weekStartsOn: 1 });
@@ -188,22 +190,20 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
         ticks.push(new Date(yearStart.getFullYear(), i, 1).getTime());
       }
     } else {
-      // ALL: include earliest month and monthly intervals thereafter
-      const allStart = new Date(periodStart);
-      const allEnd = new Date(periodEnd);
-      
-      // Start from the first day of the earliest month
-      const firstMonthStart = new Date(allStart.getFullYear(), allStart.getMonth(), 1);
-      ticks.push(firstMonthStart.getTime());
-      
-      // Add monthly ticks from the first month onwards
-      const months = (allEnd.getFullYear() - allStart.getFullYear()) * 12 + (allEnd.getMonth() - allStart.getMonth());
-      const interval = Math.max(1, Math.floor(months / 12));
-      
-      for (let i = 1; i * interval <= months; i++) {
-        const d = new Date(firstMonthStart);
-        d.setMonth(d.getMonth() + i * interval);
-        ticks.push(d.getTime());
+      // ALL: Force exactly 5 evenly-spaced ticks across the full timespan (Rule of 5)
+      const allStart = new Date(periodStart).getTime();
+      const allEnd = new Date(periodEnd).getTime();
+      const maxTicks = 5;
+
+      // Guard: if period is degenerate, return start/end duplicates
+      if (!Number.isFinite(allStart) || !Number.isFinite(allEnd) || allEnd <= allStart) {
+        for (let i = 0; i < maxTicks; i++) ticks.push(allStart);
+      } else {
+        const step = (allEnd - allStart) / (maxTicks - 1);
+        for (let i = 0; i < maxTicks; i++) {
+          const t = Math.round(allStart + step * i);
+          ticks.push(t);
+        }
       }
     }
     return ticks;
@@ -260,7 +260,7 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                 ticks={chartTicks}
                 domain={[domainStartNudged as any, periodEnd as any]}
                 allowDataOverflow={false}
-                padding={{ left: 24, right: 12 }}
+                padding={{ left: 24, right: 48 }}
               />
               <YAxis 
                 hide
@@ -277,20 +277,23 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
                     else if (activePeriod === '1M') dateLabel = format(date, 'MMM d');
                     else if (activePeriod === '1Y') dateLabel = format(date, 'MMM yyyy');
 
-                    // Read the balance explicitly from payload to avoid relying on payload order
+                    // Prefer server-provided per-point profit when available
                     const balanceEntry = payload.find((p: any) => p.dataKey === 'balance');
                     const currentBalance = Number(balanceEntry?.value ?? 0);
+                    const pointPayload = (balanceEntry && balanceEntry.payload) || payload[0]?.payload || {};
 
-                    // Calculate profit and percent: Return % = (Profit / (Balance - Profit)) * 100
-                    let totalProfit = 0, totalPercent = 0;
+                    let totalProfit = Number(pointPayload.profit ?? 0);
+                    let totalPercent = Number(pointPayload.profitPercent ?? NaN);
 
-                    if (sortedData && sortedData.length > 0) {
-                      // Find first balance at or after period start
-                      const idx = sortedData.findIndex(d => d.ts! >= periodStart);
-                      const startBalance = idx >= 0 ? Number(sortedData[idx].balance) : Number(sortedData[0].balance);
-                      totalProfit = currentBalance - startBalance;
-                      const denominator = currentBalance - totalProfit;
-                      totalPercent = denominator > 0 ? (totalProfit / denominator) * 100 : 0;
+                    // If server did not provide profitPercent, compute using the formula:
+                    // Return % = (Profit / (Balance - Profit)) * 100
+                    if (!Number.isFinite(totalPercent)) {
+                      if (Number.isFinite(totalProfit)) {
+                        const denom = currentBalance - totalProfit;
+                        totalPercent = denom > 0 ? (totalProfit / denom) * 100 : 0;
+                      } else {
+                        totalPercent = 0;
+                      }
                     }
 
                     const isProfit = totalProfit >= 0;
