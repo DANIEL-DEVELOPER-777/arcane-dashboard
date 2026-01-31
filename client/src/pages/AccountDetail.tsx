@@ -16,13 +16,15 @@ import { formatCurrency, formatPercent } from "@/lib/format";
 export default function AccountDetail() {
   const { user, isLoading: authLoading } = useAuth();
   const [, params] = useRoute("/accounts/:id");
-  const id = params ? parseInt(params.id) : 0;
+  // Parse id defensively — if it's invalid, render loading until we have a valid numeric id
+  const parsedId = params && params.id ? Number.parseInt(params.id as string, 10) : NaN;
+  const id = Number.isFinite(parsedId) && !Number.isNaN(parsedId) ? parsedId : undefined;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: account, isLoading: accountLoading } = useAccount(id);
+  const { data: account, isLoading: accountLoading } = useAccount(id as any);
   const [period, setPeriod] = useState<"1D" | "1W" | "1M" | "1Y" | "ALL">("1D");
-  const { data: history, isLoading: historyLoading } = useAccountHistory(id, period);
+  const { data: history, isLoading: historyLoading } = useAccountHistory(id as any, period);
   
   const updateAccount = useUpdateAccount();
   const deleteAccount = useDeleteAccount();
@@ -34,6 +36,8 @@ export default function AccountDetail() {
 
   if (authLoading) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
+  // If the id param is missing or invalid, show loading instead of crashing during hydration
+  if (id === undefined) return <LoadingScreen />;
   if (!accountLoading && !account) return <Redirect to="/accounts" />;
 
   const apiUrl = `${window.location.origin}/api/webhook/mt5/${account?.token}`;
@@ -80,7 +84,7 @@ export default function AccountDetail() {
   const hist = history || [];
   const initialDeposit = hist.length > 0 ? hist[0].balance : (account?.balance ?? 0);
   const currentBalance = hist.length > 0 ? hist[hist.length - 1].balance : (account?.balance ?? 0);
-  const tradeProfitQuery = useAccountProfit(id, period);
+  const tradeProfitQuery = useAccountProfit(id as any, period);
   const derivedProfit = tradeProfitQuery.data ?? 0;
 
   // Percentage calculation rules:

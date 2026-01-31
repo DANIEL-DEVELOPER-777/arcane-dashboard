@@ -14,48 +14,48 @@ export function useAccounts() {
   });
 }
 
-export function useAccount(id: number) {
+export function useAccount(id?: number) {
   return useQuery({
     queryKey: [api.accounts.get.path, id],
     queryFn: async () => {
-      const url = buildUrl(api.accounts.get.path, { id });
+      const url = buildUrl(api.accounts.get.path, { id: id as number });
       const res = await fetch(url, { credentials: "include" });
       if (res.status === 404) return null;
       if (res.status === 401) throw new Error("Unauthorized");
       if (!res.ok) throw new Error("Failed to fetch account");
       return api.accounts.get.responses[200].parse(await res.json());
     },
-    enabled: !!id,
+    enabled: typeof id === 'number' && !Number.isNaN(id) && id > 0,
     refetchInterval: 5000,
   });
 }
 
-export function useAccountHistory(id: number, period: "1D" | "1W" | "1M" | "1Y" | "ALL" = "ALL") {
+export function useAccountHistory(id?: number, period: "1D" | "1W" | "1M" | "1Y" | "ALL" = "ALL") {
   return useQuery({
     queryKey: [api.accounts.history.path, id, period],
     queryFn: async () => {
-      const url = buildUrl(api.accounts.history.path, { id }) + `?period=${period}`;
+      const url = buildUrl(api.accounts.history.path, { id: id as number }) + `?period=${period}`;
       const res = await fetch(url, { credentials: "include" });
       if (res.status === 401) throw new Error("Unauthorized");
       if (!res.ok) throw new Error("Failed to fetch history");
       return api.accounts.history.responses[200].parse(await res.json());
     },
-    enabled: !!id,
+    enabled: typeof id === 'number' && !Number.isNaN(id) && id > 0,
     refetchInterval: 5000,
   });
 }
 
-export function useAccountProfit(id: number, period: "1D" | "1W" | "1M" | "1Y" | "ALL" = "ALL") {
+export function useAccountProfit(id?: number, period: "1D" | "1W" | "1M" | "1Y" | "ALL" = "ALL") {
   return useQuery({
     queryKey: [api.accounts.get.path, id, 'profit', period],
     queryFn: async () => {
-      const url = buildUrl(api.accounts.get.path, { id }) + `/profit?period=${period}`;
+      const url = buildUrl(api.accounts.get.path, { id: id as number }) + `/profit?period=${period}`;
       const res = await fetch(url, { credentials: "include" });
       if (res.status === 401) throw new Error("Unauthorized");
       if (!res.ok) throw new Error("Failed to fetch profit");
       return (await res.json()).profit as number;
     },
-    enabled: !!id,
+    enabled: typeof id === 'number' && !Number.isNaN(id) && id > 0,
     refetchInterval: 5000,
   });
 }

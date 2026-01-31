@@ -157,6 +157,8 @@ export function EquityChart({ data, onPeriodChange, isLoading }: EquityChartProp
       for (let t = start; t <= end; t += 2 * 60 * 60 * 1000) {
         ticks.push(t);
       }
+      // Ensure final tick includes end of day (23:59) so chart shows rightmost label
+      if (ticks[ticks.length - 1] < end) ticks.push(end);
     } else if (activePeriod === '1W') {
       // Daily ticks, ensuring all days are shown
       const monday = startOfWeek(new Date(periodStart), { weekStartsOn: 1 });
