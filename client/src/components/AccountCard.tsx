@@ -36,7 +36,7 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
           <div>
             <h3 className="font-bold text-white/90 text-2xl md:text-lg tracking-tight">{account.name}</h3>
             {/* Show last synced time when available; otherwise indicate syncing */}
-            {(() => {
+            {/* {(() => {
               const lu = account.lastUpdated;
               const valid = lu && (typeof lu === 'string' || typeof lu === 'number' || lu instanceof Date) && new Date(lu as any).getTime() > 1000000000000;
               return (
@@ -44,7 +44,7 @@ export function AccountCard({ account, detailed = false }: AccountCardProps) {
                   {valid ? format(new Date(lu as any), 'MMM d, yyyy') : 'Syncing...'}
                 </p>
               );
-            })()}
+            })()} */}
           </div>
           {detailed && (
             <div className="bg-white/5 rounded-full p-2 shrink-0">
