@@ -30,6 +30,9 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Enable source maps in production builds to get readable stack traces
+    // for debugging minified React errors (can be disabled once issue resolved).
+    sourcemap: true,
   },
   server: {
     fs: {
